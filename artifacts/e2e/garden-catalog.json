@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "37977d01-3a9a-4ef6-8bc3-bdb09d2c05dc",
+  "revision": 1,
+  "name": "E2E catalog 1790430961037",
+  "width": 10,
+  "depth": 8,
+  "objects": [
+    {
+      "id": "26bb2b5a-f741-4644-a44d-46d9de489644",
+      "assetId": "tree_oak",
+      "position": {
+        "x": -3.143948397897272,
+        "y": 0,
+        "z": -2.0751832431307236
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "e039addc-8120-4929-9d44-75dfaa421b00",
+      "assetId": "brick_paver",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 2.4901831432034687
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "eb26938b-eb76-4b19-9706-067d2ae25ede",
+      "assetId": "bench_wood",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -2.0751832431306583
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "fa92af3c-07c6-4915-8461-6b93ef1a084c",
+      "assetId": "shrub_boxwood",
+      "position": {
+        "x": 3.14394839789724,
+        "y": 0,
+        "z": -2.0751832431307022
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ]
+}

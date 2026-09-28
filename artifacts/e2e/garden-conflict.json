@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "31e543c4-2f22-48d6-a09a-c68ce6456542",
+  "revision": 2,
+  "name": "E2E conflict 1790430957978",
+  "width": 10,
+  "depth": 8,
+  "objects": [
+    {
+      "id": "d72b967c-64b7-4d64-8e6a-f32f5b072fe3",
+      "assetId": "tree_oak",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 1.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "a46687b0-a907-4833-a4ff-eb0862690147",
+  "revision": 1,
+  "name": "E2E model retry 1790430966620",
+  "width": 10,
+  "depth": 8,
+  "objects": [
+    {
+      "id": "78e153b6-5bd3-49d7-819f-efb049383906",
+      "assetId": "tree_oak",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -0.0000011111111148825233
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ]
+}

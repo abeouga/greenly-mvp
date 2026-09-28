@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: ${GREENLY_E2E_DB_URL:jdbc:mysql://127.0.0.1:3306/greenly_e2e}
+    username: ${GREENLY_E2E_DB_USER}
+    password: ${GREENLY_E2E_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver

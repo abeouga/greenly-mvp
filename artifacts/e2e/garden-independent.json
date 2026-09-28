@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "4ec90d99-7375-4f4b-9965-9e80ab29e628",
+  "revision": 2,
+  "name": "E2E independent 1790430946325",
+  "width": 10,
+  "depth": 8,
+  "objects": [
+    {
+      "id": "7f48ca92-0c80-46b3-ac53-cada70aa81c8",
+      "assetId": "tree_oak",
+      "position": {
+        "x": 3.493253096396833,
+        "y": 0,
+        "z": -0.000001111111114872115
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "afeeadad-d323-4d0d-aaec-9337e0bb1956",
+      "assetId": "tree_oak",
+      "position": {
+        "x": -1.5,
+        "y": 0,
+        "z": -0.0000011111111148814391
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ]
+}

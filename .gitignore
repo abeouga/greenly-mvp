@@ -1,0 +1,11 @@
+node_modules/
+frontend/dist/
+backend/target/
+playwright-report/
+test-results/
+artifacts/playwright-report/
+artifacts/playwright-results/
+.env
+.env.*
+!.env.example
+*.log

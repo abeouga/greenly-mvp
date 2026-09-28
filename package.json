@@ -1,0 +1,31 @@
+{
+  "name": "greenly-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace frontend run dev",
+    "dev:web:e2e": "npm --workspace frontend run dev -- --port 15174",
+    "dev:api": "node scripts/maven.mjs dev",
+    "precheck": "npm run typecheck:web && npm run typecheck:e2e && npm run lint && npm run compile:api",
+    "typecheck:web": "npm --workspace frontend run typecheck",
+    "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json",
+    "lint": "eslint frontend/src e2e scripts playwright.config.ts",
+    "compile:api": "node scripts/maven.mjs compile",
+    "build:web": "npm --workspace frontend run build",
+    "test:e2e": "playwright test",
+    "assets:generate": "node scripts/generate-assets.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+  	"@playwright/test": "1.63.0",
+    "@types/node": "26.6.3",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1"
+  }
+}
