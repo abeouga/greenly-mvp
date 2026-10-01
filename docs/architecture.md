@@ -8,7 +8,7 @@
 
 - Frontend: React 19 + TypeScript + Vite、R3F 9 + Drei 10、Zustand、TanStack Query。Viteの `/api` proxyで同一オリジン通信します。
 - Backend: Python 3.12、FastAPI、Pydantic v2、同期SQLAlchemy 2、PyMySQL、MySQL、Alembic。`dev`/`e2e` profileのデモ利用者はサーバー側固定値で、`GREENLY_HOST=127.0.0.1` に制限します。移行判断と旧DB引き継ぎは`docs/fastapi-migration.md`に記録します。
-- 保存形式: `{schemaVersion:1,id,revision,name,width,depth,objects,photo}`。`photo`は`null`または元画像・投影四隅・多角形輪郭です。`revision`は同時更新制御、`schemaVersion`は形式識別です。写真追加は既存形式の任意項目として扱います。
+- 保存形式: `{schemaVersion:1,id,revision,name,width,depth,objects,photo}`。`photo`は`null`または元画像・内部の変換基準四隅・多角形輪郭です。新しい輪郭の四隅は外接矩形から自動生成し、ユーザーが別途4点をクリックする入力段階はありません。旧保存データの基準は輪郭編集前まで保持します。`revision`は同時更新制御、`schemaVersion`は形式識別です。写真追加は既存形式の任意項目として扱います。
 - 単位: Three.js 1 unit = 1m。X/Zだけ庭の中心からの座標、配置Y=0、回転はY軸ラジアン、scaleはxyz同値の0.25..3です。
 - 配置アセットIDは `tree_oak`, `shrub_boxwood`, `brick_paver`, `bench_wood` とし、GLBはリポジトリへ同梱します。生成元はこのリポジトリの基本形状スクリプトです。
 
@@ -29,6 +29,8 @@ GardenDocumentとThree.jsのランタイムを分離するため、表示実装�
 ## データフローと失敗処理
 
 操作 → 検証済み編集操作 → ZustandのGardenDocument → R3F表示。保存ボタン時だけスナップショットをPUTし、成功時に応答revisionで確定します。保存中は編集を抑止し、失敗時は編集内容とdirty状態を保持して再試行を表示します。ロード失敗は再試行を提示します。GLB失敗は他のモデル表示を止めず、対象削除または再試行へ誘導します。サーバーも庭寸法・配置数・座標・倍率・固定軸・assetId・ID重複を検証します。
+
+写真表示では透明なR3Fキャンバスを元画像に重ね、固定カメラで同じGLBを描画します。写真と3D庭はGardenModelの読み込み・失敗表示とGardenGroundの配置ルールを共有します。カメラは保存済み地面変換と庭寸法から再生成する表示状態であり、GardenDocumentやDBへThree.jsオブジェクトを保存しません。詳細は[photo-tree-overlay.md](photo-tree-overlay.md)を参照してください。
 
 ## Rollback
 

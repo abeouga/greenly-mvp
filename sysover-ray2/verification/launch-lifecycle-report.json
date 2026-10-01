@@ -1,0 +1,130 @@
+﻿{
+    "result":  "passed",
+    "verifiedAt":  "2026-10-02T00:23:24.5020735+09:00",
+    "observations":  [
+                         {
+                             "step":  "batch-launch",
+                             "overlayPid":  37936,
+                             "replacedOverlayPids":  [
+                                                         35060
+                                                     ],
+                             "foreground":  true,
+                             "title":  "Greenly 起動オーバーレイ"
+                         },
+                         {
+                             "step":  "start",
+                             "apiPort":  8080,
+                             "webPort":  5173,
+                             "apiHttp":  200,
+                             "webHttp":  200,
+                             "proxyHttp":  200,
+                             "listeners":  [
+                                               {
+                                                   "LocalPort":  8080,
+                                                   "OwningProcess":  32824
+                                               },
+                                               {
+                                                   "LocalPort":  5173,
+                                                   "OwningProcess":  23228
+                                               }
+                                           ],
+                             "summary":  "Greenly 稼働中",
+                             "action":  "00:21:04  起動完了"
+                         },
+                         {
+                             "step":  "start-replaces-existing",
+                             "apiPort":  8080,
+                             "webPort":  5173,
+                             "apiHttp":  200,
+                             "webHttp":  200,
+                             "proxyHttp":  200,
+                             "listeners":  [
+                                               {
+                                                   "LocalPort":  8080,
+                                                   "OwningProcess":  30588
+                                               },
+                                               {
+                                                   "LocalPort":  5173,
+                                                   "OwningProcess":  38416
+                                               }
+                                           ],
+                             "summary":  "Greenly 稼働中",
+                             "action":  "00:21:33  起動完了"
+                         },
+                         {
+                             "step":  "stop",
+                             "remainingListeners":  0,
+                             "remainingListenerProcesses":  0,
+                             "action":  "00:21:47  停止完了"
+                         },
+                         {
+                             "step":  "start-after-stop",
+                             "apiPort":  8080,
+                             "webPort":  5173,
+                             "apiHttp":  200,
+                             "webHttp":  200,
+                             "proxyHttp":  200,
+                             "listeners":  [
+                                               {
+                                                   "LocalPort":  8080,
+                                                   "OwningProcess":  5464
+                                               },
+                                               {
+                                                   "LocalPort":  5173,
+                                                   "OwningProcess":  34812
+                                               }
+                                           ],
+                             "summary":  "Greenly 稼働中",
+                             "action":  "00:22:20  起動完了"
+                         },
+                         {
+                             "step":  "restart",
+                             "apiPort":  8080,
+                             "webPort":  5173,
+                             "apiHttp":  200,
+                             "webHttp":  200,
+                             "proxyHttp":  200,
+                             "listeners":  [
+                                               {
+                                                   "LocalPort":  8080,
+                                                   "OwningProcess":  34352
+                                               },
+                                               {
+                                                   "LocalPort":  5173,
+                                                   "OwningProcess":  39792
+                                               }
+                                           ],
+                             "summary":  "Greenly 稼働中",
+                             "action":  "00:22:49  再起動完了"
+                         },
+                         {
+                             "step":  "batch-launch",
+                             "overlayPid":  21976,
+                             "replacedOverlayPids":  [
+                                                         37936
+                                                     ],
+                             "foreground":  true,
+                             "title":  "Greenly 起動オーバーレイ"
+                         },
+                         {
+                             "step":  "restart-after-overlay-replacement",
+                             "apiPort":  8080,
+                             "webPort":  5173,
+                             "apiHttp":  200,
+                             "webHttp":  200,
+                             "proxyHttp":  200,
+                             "listeners":  [
+                                               {
+                                                   "LocalPort":  8080,
+                                                   "OwningProcess":  40768
+                                               },
+                                               {
+                                                   "LocalPort":  5173,
+                                                   "OwningProcess":  19068
+                                               }
+                                           ],
+                             "summary":  "Greenly 稼働中",
+                             "action":  "00:23:22  再起動完了"
+                         }
+                     ]
+}

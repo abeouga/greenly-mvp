@@ -28,7 +28,7 @@ public sealed class GreenlyController
         _processes = new ProjectProcesses(settings.ProjectRoot);
     }
 
-    public bool CanStart => !LauncherActive && !_projectRunning;
+    public bool CanStart => true;
     public bool CanStop => LauncherActive || _projectRunning;
     public string? FrontendUrl => _lastStatus.FrontendUrl;
 
@@ -56,14 +56,18 @@ public sealed class GreenlyController
     public async Task StartAsync()
     {
         ValidateConfiguration();
-        await GetStatusAsync();
-        if (LauncherActive || (_projectRunning && _lastStatus.BothHealthy))
+        await StopAsync();
+        try { await LaunchAsync(); }
+        catch
         {
-            await WaitForStatusAsync(status => status.BothHealthy, _settings.StartupTimeoutSeconds,
-                "Greenlyの起動確認がタイムアウトしました。ログを確認してください。");
-            return;
+            try { await StopAsync(); }
+            catch (Exception cleanupError) { AppLog.Write($"Startup cleanup failed: {cleanupError.Message}"); }
+            throw;
         }
+    }
 
+    private async Task LaunchAsync()
+    {
         var candidateWebPorts = Enumerable.Range(_settings.FrontendPortRangeStart,
             _settings.FrontendPortRangeEnd - _settings.FrontendPortRangeStart + 1);
         var occupiedWebPorts = new HashSet<int>();
@@ -138,8 +142,6 @@ public sealed class GreenlyController
 
     public async Task RestartAsync()
     {
-        await StopAsync();
-        await Task.Delay(500);
         await StartAsync();
     }
 

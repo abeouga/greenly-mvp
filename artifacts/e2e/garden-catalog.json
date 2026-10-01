@@ -1,18 +1,56 @@
 {
   "schemaVersion": 1,
-  "id": "42223bac-ed86-4648-b908-faa42c2fe1d0",
+  "id": "e81c7945-b347-4b93-b6d5-afce565a8ab0",
   "revision": 1,
-  "name": "E2E catalog 1790863682973",
+  "name": "E2E catalog 1790866762702",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "537c6cab-9eb4-4024-84f2-95fad06ba218",
+      "id": "1cc1e14f-738a-4308-a913-1da36c36cfa0",
+      "assetId": "shrub_boxwood",
+      "position": {
+        "x": 3.1439483978972356,
+        "y": 0,
+        "z": -2.075183243130705
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "4f84592e-f554-463d-8a01-8ba613e82e55",
+      "assetId": "tree_oak",
+      "position": {
+        "x": -3.1439483978972684,
+        "y": 0,
+        "z": -2.0751832431307267
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "609fd2b2-c24a-4309-9381-6ed1f36e2b29",
       "assetId": "brick_paver",
       "position": {
         "x": 0,
         "y": 0,
-        "z": 2.4901831432034487
+        "z": 2.490183143203458
       },
       "rotation": {
         "x": 0,
@@ -26,50 +64,12 @@
       }
     },
     {
-      "id": "66c60cbe-0970-4508-97e1-d4feed0ed67e",
-      "assetId": "shrub_boxwood",
-      "position": {
-        "x": 3.143948397897225,
-        "y": 0,
-        "z": -2.075183243130692
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scale": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "692e57c8-ee58-4700-8065-6a428f89a85e",
+      "id": "c50d8777-cca7-48e8-8a6f-690d0617f1cc",
       "assetId": "bench_wood",
       "position": {
         "x": 0,
         "y": 0,
-        "z": -2.075183243130644
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scale": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "bd49e957-d7a2-4d91-aa32-94d9e37c79d4",
-      "assetId": "tree_oak",
-      "position": {
-        "x": -3.143948397897259,
-        "y": 0,
-        "z": -2.0751832431307204
+        "z": -2.075183243130649
       },
       "rotation": {
         "x": 0,

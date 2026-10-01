@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { addObject, changeObjectTransform, createPlacedObject, duplicateObject, removeObject } from '../domain/gardenEditing';
-import { validSurface } from '../domain/photoProjection';
+import { validSurface, withPhotoBoundary } from '../domain/photoProjection';
 import type { GardenAsset, GardenDocument, GardenPhoto, ImagePoint, TransformTool } from '../types/garden';
 
 interface EditorState {
@@ -85,7 +85,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const state = get();
     const photo = state.document?.photo;
     if (!state.document || !photo || state.photoBoundaryDraft === null || state.isSaving) return false;
-    const next = { ...photo, boundary: state.photoBoundaryDraft };
+    const next = withPhotoBoundary(photo, state.photoBoundaryDraft);
     if (!validSurface(next)) return false;
     set({ document: { ...state.document, photo: next }, photoBoundaryDraft: null, isDirty: true, saveError: null });
     return true;
