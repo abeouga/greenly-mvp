@@ -29,7 +29,7 @@ dotnet build .\SysOverRay.csproj -c Release
 dotnet publish .\SysOverRay.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ..\app
 ```
 
-配布先に `app\overlay-settings.json` を含めてください。`SysOverRayを起動.lnk` は `app\SysOverRay.exe` を起動し、作業フォルダーも `app` に設定します。
+配布先に `app\overlay-settings.json` を含めてください。`setup.bat` がクローン先を指すデスクトップショートカットを作成し、`start.ps1` が実行ファイルの作業フォルダーとユーザー領域のDesktop Runtimeを設定して起動します。
 
 ## 安全境界
 

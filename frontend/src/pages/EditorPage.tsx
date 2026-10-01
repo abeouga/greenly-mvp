@@ -171,7 +171,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
           <button type="button" onClick={save} disabled={isSaving || isTransformDragging}>再試行</button>
         </div>
       )}
-      {!photoReady && <div className="editor-alert" role="status">{hasBoundaryDraft ? '庭の輪郭を描画中です。始点につないで確定するか、描画を取消してください。' : '写真の投影基準4点と庭の輪郭を指定してから保存してください。'}</div>}
+      {!photoReady && <div className="editor-alert photo-progress" role="status">{hasBoundaryDraft ? '庭の輪郭を描画中です。始点につないで確定するか、描画を取消してください。' : '写真の投影基準4点と庭の輪郭を指定してから保存してください。'}</div>}
       {assetQuery.isError && (
         <div className="editor-alert notice-error" role="alert">
           <span>オブジェクトカタログを読み込めませんでした。</span>

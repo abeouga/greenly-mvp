@@ -83,6 +83,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled }: { 
     try { await image.decode(); } catch { setError('画像を読み込めません。'); return; }
     if (image.naturalWidth > 6000 || image.naturalHeight > 6000 || image.naturalWidth * image.naturalHeight > 25_000_000) { setError('画像は各辺6000px、総画素数2500万以下にしてください。'); return; }
     useEditorStore.getState().setPhoto({ dataUrl, imageWidth: image.naturalWidth, imageHeight: image.naturalHeight, corners: [], boundary: [] });
+    useEditorStore.getState().setPhotoBoundaryDraft(null);
     setPointer(null);
     setError('');
   }
@@ -196,7 +197,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled }: { 
           return <g key={object.id}><circle cx={p.x} cy={p.y} r={Math.max(8, photo.imageWidth / 100)} fill={onGround ? '#d4793e' : '#bc3131'} stroke="white" strokeWidth="3" /><text x={p.x} y={p.y - 12} textAnchor="middle" fill="white" fontSize={Math.max(14, photo.imageWidth / 75)}>{object.assetId}</text></g>;
         })}
         {boundaryPoints.length > 1 && <polyline points={boundary} fill="none" stroke="#ffbd68" strokeWidth={Math.max(2, photo.imageWidth / 500)} pointerEvents="none" />}
-        {previewStart && previewEnd && !dragging && !disabled && <line data-testid="photo-preview-edge" x1={previewStart.x} y1={previewStart.y} x2={previewEnd.x} y2={previewEnd.y} stroke={closing ? '#d9ee87' : '#ffbd68'} strokeWidth={Math.max(2, photo.imageWidth / 500)} strokeDasharray="7 5" pointerEvents="none" />}
+        {previewStart && previewEnd && !dragging && !disabled && <line data-testid="photo-preview-edge" x1={previewStart.x} y1={previewStart.y} x2={previewEnd.x} y2={previewEnd.y} stroke={drawingBoundary ? closing ? '#d9ee87' : '#ffbd68' : '#fff'} strokeWidth={Math.max(2, photo.imageWidth / 500)} strokeDasharray="7 5" pointerEvents="none" />}
         {photo.corners.map((point, index) => { const p = pixels(point); return <g key={`c${index}`} pointerEvents={drawingBoundary ? 'none' : undefined} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.stopPropagation(); if (disabled) return; setPointer(null); setDragging({ kind: 'corner', index }); event.currentTarget.setPointerCapture(event.pointerId); }}><circle cx={p.x} cy={p.y} r={Math.max(10, photo.imageWidth / 95)} fill="#fff" stroke="#266049" strokeWidth="4" /><text x={p.x} y={p.y + 5} textAnchor="middle" fontSize={Math.max(12, photo.imageWidth / 100)}>{index + 1}</text></g>; })}
         {boundaryPoints.map((point, index) => { const p = pixels(point); const start = drawingBoundary && index === 0; return <g key={`b${index}`}>
           {start && draft.length >= 3 && <circle cx={p.x} cy={p.y} r={Math.max(14, photo.imageWidth / 80)} fill="none" stroke={closing ? '#d9ee87' : '#ffbd68'} strokeWidth="2" pointerEvents="none" />}

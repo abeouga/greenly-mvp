@@ -130,11 +130,11 @@ function Wait-ForGreenlyWeb {
 
 foreach ($required in @('node.exe', 'npm.cmd', 'uv.exe')) {
   if (-not (Get-Command $required -ErrorAction SilentlyContinue)) {
-    throw "$required がPATH上にありません。READMEの必要環境を確認してください。"
+    throw "$required が見つかりません。リポジトリ直下のsetup.batを実行してから再試行してください。"
   }
 }
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'node_modules') -PathType Container)) {
-  throw "JavaScript依存関係がありません。次を実行してください: npm install (場所: $repoRoot)"
+  throw "JavaScript依存関係がありません。リポジトリ直下のsetup.batを実行してください: $repoRoot"
 }
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'backend\pyproject.toml') -PathType Leaf)) {
   throw "Python API設定が見つかりません: $repoRoot\backend\pyproject.toml"

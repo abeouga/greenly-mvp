@@ -152,7 +152,7 @@ test('I. 仮線追従・始点で6点輪郭確定・配置・保存復元・3D�
 });
 
 test('J. 未完成・交差輪郭を拒否し、戻す・ボタン確定・取消で保存済み輪郭を維持', async ({ page, request }) => {
-  const { id } = await preparePhoto(page);
+  const { id, imageDataUrl } = await preparePhoto(page);
   for (const [x, y] of corners) await clickImage(page, x, y);
   await clickImage(page, 0.25, 0.7);
   await clickImage(page, 0.65, 0.3);
@@ -203,4 +203,12 @@ test('J. 未完成・交差輪郭を拒否し、戻す・ボタン確定・取�
   await expect(page.getByTestId('save-status')).toHaveText('保存済み');
   expect(await gardenJson(request, id)).toEqual(saved);
   await page.screenshot({ path: resolve(artifactDirectory, 'garden-photo-triangle.png'), fullPage: true });
+  await page.getByRole('button', { name: '多角形を描く' }).click();
+  await clickImage(page, ...outline[0] as [number, number]);
+  await page.getByLabel('庭の写真を選択').setInputFiles({ name: 'garden.png', mimeType: 'image/png', buffer: Buffer.from(imageDataUrl.split(',')[1], 'base64') });
+  await expect(page.locator('.photo-stage circle[fill="#fff"]')).toHaveCount(0);
+  await expect(page.locator('.photo-stage circle[fill="#ffbd68"]')).toHaveCount(0);
+  await expect(finish).toHaveCount(0);
+  await expect(page.locator('.photo-hint')).toContainText('投影基準 1/4');
+  expect(await gardenJson(request, id)).toEqual(saved);
 });

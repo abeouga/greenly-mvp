@@ -1,4 +1,4 @@
-param()
+﻿param()
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -27,6 +27,19 @@ function Get-WindowsArchitecture {
     'AMD64' { return 'x64' }
     'ARM64' { return 'arm64' }
     default { throw "未対応のWindows CPUアーキテクチャです: $architecture" }
+  }
+}
+
+function Get-FileSha256 {
+  param([string]$Path)
+
+  $stream = [IO.File]::OpenRead($Path)
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '')
+  } finally {
+    $algorithm.Dispose()
+    $stream.Dispose()
   }
 }
 
@@ -70,7 +83,7 @@ function Get-NodeArchive {
   $pattern = '(?m)^([0-9a-fA-F]{64})\s+\*?' + [regex]::Escape($archiveName) + '\s*$'
   $checksumMatch = [regex]::Match((Get-Content -Raw -LiteralPath $checksumPath), $pattern)
   if (-not $checksumMatch.Success) { throw "Node.js配布物のSHA-256が見つかりません: $archiveName" }
-  $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+  $actualHash = Get-FileSha256 -Path $archivePath
   if ($actualHash -ne $checksumMatch.Groups[1].Value.ToUpperInvariant()) {
     throw 'Node.js配布物のSHA-256が一致しません。展開を中止しました。'
   }
@@ -87,14 +100,22 @@ function Get-NodeArchive {
 
 function Get-UvInstallation {
   $command = Get-Command uv.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-  if ($null -ne $command) { return $command.Source }
   $localPath = Join-Path $uvTools 'uv.exe'
-  if (Test-Path -LiteralPath $localPath -PathType Leaf) {
-    Add-PathFirst -Path $uvTools
-    return $localPath
+  $candidates = @()
+  if ($null -ne $command) { $candidates += $command.Source }
+  if (Test-Path -LiteralPath $localPath -PathType Leaf) { $candidates += $localPath }
+  foreach ($candidate in $candidates) {
+    if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+    $versionText = (& $candidate --version 2>$null | Select-Object -First 1)
+    if ($versionText -match 'uv\s+(\d+\.\d+\.\d+)') {
+      if ([version]$Matches[1] -ge [version]'0.8.0') {
+        if ($candidate -eq $localPath) { Add-PathFirst -Path $uvTools }
+        return $candidate
+      }
+    }
   }
 
-  Write-Host 'uvが見つからないため、公式リリースをチェックサム検証付きで取得します。'
+  Write-Host '利用可能なuv 0.8以降が見つからないため、公式リリースをチェックサム検証付きで取得します。'
   $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/astral-sh/uv/releases/latest' `
     -Headers @{ 'User-Agent' = 'Greenly-setup' } -TimeoutSec 30
   $architecture = Get-WindowsArchitecture
@@ -109,7 +130,7 @@ function Get-UvInstallation {
   Invoke-WebRequest -Uri $archive.browser_download_url -OutFile $archivePath -TimeoutSec 300
   Invoke-WebRequest -Uri $checksum.browser_download_url -OutFile $checksumPath -TimeoutSec 30
   $expectedHash = [regex]::Match((Get-Content -Raw -LiteralPath $checksumPath), '[0-9a-fA-F]{64}').Value
-  $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+  $actualHash = Get-FileSha256 -Path $archivePath
   if ([string]::IsNullOrWhiteSpace($expectedHash) -or $actualHash -ne $expectedHash.ToUpperInvariant()) {
     throw 'uv配布物のSHA-256が一致しません。展開を中止しました。'
   }
@@ -189,21 +210,60 @@ try {
 
   $python = Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($null -eq $python) { Write-Host 'Python 3.12はuvのユーザー管理領域へインストールします。' }
-  & $uvPath python install '3.12'
+  & $uvPath python install '3.12' --no-bin
   if ($LASTEXITCODE -ne 0) { throw 'Python 3.12の取得に失敗しました。' }
 
   $nodeModules = Join-Path $repoRoot 'node_modules'
   $packageLock = Join-Path $repoRoot 'package-lock.json'
-  $packageHash = (Get-FileHash -LiteralPath $packageLock -Algorithm SHA256).Hash
+  $packageHash = Get-FileSha256 -Path $packageLock
   $packageMarker = Join-Path $nodeModules '.greenly-package-lock.sha256'
   $installedPackageHash = if (Test-Path -LiteralPath $packageMarker) { (Get-Content -Raw -LiteralPath $packageMarker).Trim() } else { '' }
   if ($installedPackageHash -ne $packageHash) {
-    Write-Host 'JavaScript依存関係をpackage-lock.jsonから復元します。'
-    Push-Location $repoRoot
-    try {
-      & $node.Npm ci
-      if ($LASTEXITCODE -ne 0) { throw "npm ciが終了コード $LASTEXITCODE で失敗しました。" }
-    } finally { Pop-Location }
+    $installedTreeMatches = $false
+    $installedPackageLock = Join-Path $nodeModules '.package-lock.json'
+    if (Test-Path -LiteralPath $installedPackageLock -PathType Leaf) {
+      try {
+        $lockCheck = @'
+const fs = require('node:fs');
+const expected = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+const installed = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+let matches = expected.lockfileVersion === installed.lockfileVersion;
+for (const [path, locked] of Object.entries(expected.packages)) {
+  if (!path.startsWith('node_modules/')) continue;
+  const actual = installed.packages[path];
+  if (!actual) {
+    if (!locked.optional) matches = false;
+    continue;
+  }
+  if (locked.version !== actual.version || (locked.integrity && locked.integrity !== actual.integrity)) {
+    matches = false;
+  }
+}
+process.exitCode = matches ? 0 : 1;
+'@
+        & $node.Node -e $lockCheck $packageLock $installedPackageLock
+        $installedTreeMatches = $LASTEXITCODE -eq 0
+        if ($installedTreeMatches) {
+          Push-Location $repoRoot
+          try {
+            & $node.Npm ls --workspaces --depth=0 --silent
+            $installedTreeMatches = $LASTEXITCODE -eq 0
+          } finally { Pop-Location }
+        }
+      } catch {
+        $installedTreeMatches = $false
+      }
+    }
+    if ($installedTreeMatches) {
+      Write-Host '既存のJavaScript依存関係がpackage-lock.jsonと一致しています。再インストールを省略します。'
+    } else {
+      Write-Host 'JavaScript依存関係をpackage-lock.jsonから復元します。'
+      Push-Location $repoRoot
+      try {
+        & $node.Npm ci
+        if ($LASTEXITCODE -ne 0) { throw "npm ciが終了コード $LASTEXITCODE で失敗しました。" }
+      } finally { Pop-Location }
+    }
     Set-Content -LiteralPath $packageMarker -Value $packageHash -Encoding ASCII
   } else {
     Write-Host 'JavaScript依存関係はロックファイルと一致しています。'
@@ -211,14 +271,24 @@ try {
 
   $backendRoot = Join-Path $repoRoot 'backend'
   $uvLock = Join-Path $backendRoot 'uv.lock'
-  $uvHash = (Get-FileHash -LiteralPath $uvLock -Algorithm SHA256).Hash
+  $uvHash = Get-FileSha256 -Path $uvLock
   $venv = Join-Path $backendRoot '.venv'
   $uvMarker = Join-Path $venv '.greenly-uv-lock.sha256'
   $installedUvHash = if (Test-Path -LiteralPath $uvMarker) { (Get-Content -Raw -LiteralPath $uvMarker).Trim() } else { '' }
   if ($installedUvHash -ne $uvHash -or -not (Test-Path -LiteralPath (Join-Path $venv 'Scripts\python.exe'))) {
-    Write-Host 'Python依存関係をbackend/uv.lockから復元します。'
-    & $uvPath sync --project $backendRoot --locked
-    if ($LASTEXITCODE -ne 0) { throw "uv syncが終了コード $LASTEXITCODE で失敗しました。" }
+    $venvPython = Join-Path $venv 'Scripts\python.exe'
+    $venvMatchesLock = $false
+    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+      & $uvPath sync --project $backendRoot --locked --check
+      $venvMatchesLock = $LASTEXITCODE -eq 0
+    }
+    if ($venvMatchesLock) {
+      Write-Host '既存のPython依存関係がbackend/uv.lockと一致しています。再同期を省略します。'
+    } else {
+      Write-Host 'Python依存関係をbackend/uv.lockから復元します。'
+      & $uvPath sync --project $backendRoot --locked
+      if ($LASTEXITCODE -ne 0) { throw "uv syncが終了コード $LASTEXITCODE で失敗しました。" }
+    }
     Set-Content -LiteralPath $uvMarker -Value $uvHash -Encoding ASCII
   } else {
     Write-Host 'Python依存関係はロックファイルと一致しています。'
