@@ -189,16 +189,7 @@ try {
     Import-LocalDatabaseSettings -Path (Join-Path $repoRoot '.env')
     if ([string]::IsNullOrWhiteSpace($env:GREENLY_DB_USER)) { $env:GREENLY_DB_USER = 'greenly_dev' }
     if ([string]::IsNullOrWhiteSpace($env:GREENLY_DB_PASSWORD)) {
-      $securePassword = Read-Host 'MySQLのGreenly開発用ユーザーパスワード' -AsSecureString
-      $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-      try {
-        $env:GREENLY_DB_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
-      } finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
-      }
-    }
-    if ([string]::IsNullOrWhiteSpace($env:GREENLY_DB_PASSWORD)) {
-      throw 'GREENLY_DB_PASSWORDが空です。環境変数、.env、または非表示入力で設定してください。'
+      throw 'MySQLの接続設定がありません。リポジトリ直下のsetup.batでDBと専用ユーザーを準備してください。'
     }
 
     $apiCommand = "`$env:GREENLY_PROFILE='dev'; `$env:GREENLY_HOST='127.0.0.1'; `$env:GREENLY_PORT='$apiPort'; Write-Host 'Greenly API: http://127.0.0.1:$apiPort'; npm run dev:api"

@@ -1,18 +1,37 @@
 {
   "schemaVersion": 1,
-  "id": "42223bac-ed86-4648-b908-faa42c2fe1d0",
+  "id": "39bc40be-6a4c-45e3-8d44-10d12341f0e4",
   "revision": 1,
-  "name": "E2E catalog 1790863682973",
+  "name": "E2E catalog 1790870717947",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "537c6cab-9eb4-4024-84f2-95fad06ba218",
+      "id": "27aa1a3c-b519-4244-ae6a-3b75b3d96cca",
+      "assetId": "shrub_boxwood",
+      "position": {
+        "x": 3.1439483978972502,
+        "y": 0,
+        "z": -2.075183243130709
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "be36d8fc-ee44-4b84-9dae-f1aa99db1c04",
       "assetId": "brick_paver",
       "position": {
         "x": 0,
         "y": 0,
-        "z": 2.4901831432034487
+        "z": 2.4901831432034776
       },
       "rotation": {
         "x": 0,
@@ -26,12 +45,12 @@
       }
     },
     {
-      "id": "66c60cbe-0970-4508-97e1-d4feed0ed67e",
-      "assetId": "shrub_boxwood",
+      "id": "d225c0f2-7b1d-4304-b603-bc1ab88b56ea",
+      "assetId": "tree_oak",
       "position": {
-        "x": 3.143948397897225,
+        "x": -3.143948397897272,
         "y": 0,
-        "z": -2.075183243130692
+        "z": -2.0751832431307236
       },
       "rotation": {
         "x": 0,
@@ -45,31 +64,12 @@
       }
     },
     {
-      "id": "692e57c8-ee58-4700-8065-6a428f89a85e",
+      "id": "e5f8408f-6bf6-434c-a058-89570e60e9fd",
       "assetId": "bench_wood",
       "position": {
         "x": 0,
         "y": 0,
-        "z": -2.075183243130644
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scale": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "bd49e957-d7a2-4d91-aa32-94d9e37c79d4",
-      "assetId": "tree_oak",
-      "position": {
-        "x": -3.143948397897259,
-        "y": 0,
-        "z": -2.0751832431307204
+        "z": -2.0751832431306747
       },
       "rotation": {
         "x": 0,

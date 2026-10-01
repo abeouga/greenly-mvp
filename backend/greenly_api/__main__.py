@@ -5,7 +5,9 @@ import sys
 import uvicorn
 
 from .config import Settings
+from .local_mysql import ensure_for_settings
 from .migrations import migrate
+from .startup_errors import safe_error
 
 
 def main() -> int:
@@ -14,6 +16,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         settings = Settings.from_env()
+        ensure_for_settings(settings)
         result = migrate(settings)
         print(json.dumps(result, ensure_ascii=False), flush=True)
         if args.action == "serve":
@@ -24,8 +27,7 @@ def main() -> int:
         print(f"Greenly startup rejected: {error}", file=sys.stderr)
     except Exception as error:
         # Do not print SQL parameters, credentials, or request payloads.
-        print(f"Greenly startup failed ({type(error).__name__}). Check MySQL connectivity and permissions.",
-              file=sys.stderr)
+        print(f"Greenly startup failed: {safe_error(error)}", file=sys.stderr)
     return 1
 
 

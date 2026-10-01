@@ -1,4 +1,7 @@
-﻿param()
+﻿param(
+  [ValidateSet('auto', 'existing', 'managed')]
+  [string]$DatabaseMode = 'auto'
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
@@ -9,7 +12,8 @@ foreach ($scriptPath in @($dependencySetup, $overlaySetup)) {
   if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
     throw "セットアップスクリプトが見つかりません: $scriptPath"
   }
-  & $scriptPath
+  if ($scriptPath -eq $dependencySetup) { & $scriptPath -DatabaseMode $DatabaseMode }
+  else { & $scriptPath }
   if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "セットアップに失敗しました: $scriptPath" }
 }
 

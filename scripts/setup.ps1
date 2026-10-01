@@ -1,7 +1,13 @@
-﻿param()
+﻿param(
+  [ValidateSet('auto', 'existing', 'managed')]
+  [string]$DatabaseMode = 'auto'
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
+$env:PYTHONIOENCODING = 'utf-8'
 
 if ($env:OS -ne 'Windows_NT') {
   throw 'このセットアップはWindows用です。'
@@ -93,7 +99,11 @@ function Get-NodeArchive {
   $sourceRoot = Join-Path $extractRoot "node-$version-win-$Architecture"
   $destination = Join-Path $nodeTools "node-$version-win-$Architecture"
   New-Item -ItemType Directory -Path $nodeTools -Force | Out-Null
-  if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Recurse -Force }
+  $resolvedDestination = [IO.Path]::GetFullPath($destination)
+  if (-not $resolvedDestination.StartsWith([IO.Path]::GetFullPath($nodeTools) + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Node.jsの展開先がツール用フォルダー外です。'
+  }
+  if (Test-Path -LiteralPath $resolvedDestination) { Remove-Item -LiteralPath $resolvedDestination -Recurse -Force }
   Move-Item -LiteralPath $sourceRoot -Destination $destination
   return (Get-NodeInstallation -Directory $destination)
 }
@@ -143,46 +153,6 @@ function Get-UvInstallation {
   Copy-Item -LiteralPath $source.FullName -Destination $localPath -Force
   Add-PathFirst -Path $uvTools
   return $localPath
-}
-
-function Get-DatabaseEndpoint {
-  $address = $env:GREENLY_DB_URL
-  if ([string]::IsNullOrWhiteSpace($address)) {
-    $envFile = Join-Path $repoRoot '.env'
-    if (Test-Path -LiteralPath $envFile -PathType Leaf) {
-      foreach ($line in Get-Content -LiteralPath $envFile) {
-        if ($line -match '^\s*GREENLY_DB_URL\s*=\s*(.*?)\s*$') {
-          $address = $Matches[1]
-          if ($address.Length -ge 2 -and (($address[0] -eq '"' -and $address[-1] -eq '"') -or
-              ($address[0] -eq "'" -and $address[-1] -eq "'"))) {
-            $address = $address.Substring(1, $address.Length - 2)
-          }
-          break
-        }
-      }
-    }
-  }
-
-  if ([string]::IsNullOrWhiteSpace($address)) { return [pscustomobject]@{ Host = '127.0.0.1'; Port = 3306 } }
-  $address = $address -replace '^jdbc:', ''
-  $uri = $null
-  if ([Uri]::TryCreate($address, [UriKind]::Absolute, [ref]$uri) -and $uri.Scheme.StartsWith('mysql')) {
-    return [pscustomobject]@{ Host = $uri.Host; Port = $(if ($uri.IsDefaultPort) { 3306 } else { $uri.Port }) }
-  }
-  return $null
-}
-
-function Test-TcpEndpoint {
-  param([string]$HostName, [int]$Port)
-  $client = New-Object System.Net.Sockets.TcpClient
-  try {
-    $connection = $client.ConnectAsync($HostName, $Port)
-    return $connection.Wait(1200) -and $client.Connected
-  } catch {
-    return $false
-  } finally {
-    $client.Close()
-  }
 }
 
 try {
@@ -305,16 +275,20 @@ process.exitCode = matches ? 0 : 1;
     } finally { Pop-Location }
   }
 
-  $databaseEndpoint = Get-DatabaseEndpoint
-  if ($null -eq $databaseEndpoint) {
-    Write-Warning 'GREENLY_DB_URLを解釈できません。READMEのDB接続設定を確認してください。'
-  } elseif (-not (Test-TcpEndpoint -HostName $databaseEndpoint.Host -Port $databaseEndpoint.Port)) {
-    Write-Warning "MySQLへ接続できません: $($databaseEndpoint.Host):$($databaseEndpoint.Port)。Serverを起動し、greenly DBとgreenly_devユーザーを作成してからstart.batを実行してください。"
-  } else {
-    Write-Host "MySQL: TCP接続を確認しました ($($databaseEndpoint.Host):$($databaseEndpoint.Port))。"
-  }
+  . (Join-Path $PSScriptRoot 'mysql-tools.ps1')
+  $mysqlBin = Get-GreenlyMySqlBin -Portable:($DatabaseMode -eq 'managed')
+  Initialize-GreenlyMySqlRuntime -Bin $mysqlBin
+  Add-PathFirst -Path $mysqlBin
+  Push-Location $backendRoot
+  try { & $uvPath run --locked --project $backendRoot python -m greenly_api.setup_database --mode $DatabaseMode --bin $mysqlBin }
+  finally { Pop-Location }
+  if ($LASTEXITCODE -ne 0) { throw 'MySQLのセットアップに失敗しました。上の診断を確認してsetup.batを再実行してください。' }
 
-  Write-Host 'Greenlyのツールとロック済み依存関係のセットアップが完了しました。'
+  Write-Host 'Greenlyのツール・依存関係・MySQLのセットアップが完了しました。'
 } finally {
-  if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+  $resolvedTemporary = [IO.Path]::GetFullPath($tempRoot)
+  if ($resolvedTemporary.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\greenly-setup-',
+      [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $resolvedTemporary)) {
+    Remove-Item -LiteralPath $resolvedTemporary -Recurse -Force
+  }
 }
