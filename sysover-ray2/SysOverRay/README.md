@@ -4,7 +4,7 @@ Windows 10/11 x64デスクトップからGreenlyのAPIとWeb画面を起動、�
 
 ## 起動
 
-初回はリポジトリ直下の `setup.bat` を実行してください。以後はデスクトップに作成された `Greenly SysOverRay` ショートカット、または `sysover-ray2\start.bat` を実行します。PowerShellからは `sysover-ray2\start.ps1` を使います。
+初回はリポジトリ直下の `setup.bat`、または `sysover-ray2\setup.bat` を実行してください。以後はデスクトップに作成された `Greenly SysOverRay` ショートカット、または `sysover-ray2\start.bat` を実行します。PowerShellからは `sysover-ray2\start.ps1` を使います。
 
 ## 操作
 

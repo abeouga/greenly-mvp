@@ -9,10 +9,12 @@ interface PropertiesPanelProps {
   selectedAsset: GardenAsset | null;
   tool: TransformTool;
   disabled: boolean;
+  collapsed: boolean;
   onSelectObject: (id: string) => void;
   onSetTool: (tool: TransformTool) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onToggle: () => void;
 }
 
 export function PropertiesPanel({
@@ -22,10 +24,12 @@ export function PropertiesPanel({
   selectedAsset,
   tool,
   disabled,
+  collapsed,
   onSelectObject,
   onSetTool,
   onDuplicate,
   onDelete,
+  onToggle,
 }: PropertiesPanelProps) {
   const editError = useEditorStore((state) => state.editError);
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
@@ -70,7 +74,20 @@ export function PropertiesPanel({
   }
 
   return (
-    <aside id="properties-panel" className="editor-panel properties-panel">
+    <aside id="properties-panel" className={`editor-panel side-panel properties-panel${collapsed ? ' is-collapsed' : ''}`}>
+      <div className="side-panel-controls">
+        <button
+          className="side-panel-toggle"
+          type="button"
+          aria-label={collapsed ? '配置済み・プロパティパネルを表示' : '配置済み・プロパティパネルを隠す'}
+          aria-expanded={!collapsed}
+          aria-controls="properties-panel-content"
+          onClick={onToggle}
+        >
+          <span aria-hidden="true">{collapsed ? '‹' : '›'}</span>
+        </button>
+      </div>
+      <div id="properties-panel-content" className="side-panel-content" aria-hidden={collapsed}>
       <section className="placed-section">
         <div className="panel-heading panel-heading-row">
           <div>
@@ -153,6 +170,7 @@ export function PropertiesPanel({
           </>
         )}
       </section>
+      </div>
     </aside>
   );
 }

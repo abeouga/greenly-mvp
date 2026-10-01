@@ -47,7 +47,8 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   const deleteSelected = useEditorStore((state) => state.deleteSelected);
   const [retryRequest, setRetryRequest] = useState<{ objectId: string; sequence: number } | null>(null);
   const [viewMode, setViewMode] = useState<'photo' | '3d'>('3d');
-  const [sidePanelsVisible, setSidePanelsVisible] = useState(true);
+  const [catalogCollapsed, setCatalogCollapsed] = useState(false);
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
 
   useEffect(() => {
     if (gardenQuery.data) {
@@ -155,15 +156,6 @@ export function EditorPage({ gardenId }: EditorPageProps) {
       <GardenHeader title={document.name} subtitle={`${document.width} × ${document.depth} m · 中心原点 · 1目盛り = 1m`} />
       <div className="editor-toolbar">
         <button className="button button-secondary list-button" onClick={goToList} disabled={isEditingDisabled}>← 庭一覧</button>
-        <button
-          className="button button-secondary panel-visibility-button"
-          type="button"
-          aria-controls="catalog-panel properties-panel"
-          aria-expanded={sidePanelsVisible}
-          onClick={() => setSidePanelsVisible((visible) => !visible)}
-        >
-          {sidePanelsVisible ? '左右パネルを隠す' : '左右パネルを表示'}
-        </button>
         <div className="toolbar-status" aria-live="polite">
           <span className={`status-dot${isDirty || hasBoundaryDraft ? ' status-dirty' : ''}`} />
           <span data-testid="save-status">{statusText}</span>
@@ -195,8 +187,15 @@ export function EditorPage({ gardenId }: EditorPageProps) {
         </div>
       )}
 
-      <main className={`editor-layout${sidePanelsVisible ? '' : ' editor-layout-panels-hidden'}`}>
-        <CatalogPanel assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled || hasBoundaryDraft || assetQuery.isError} onSelect={selectAsset} />
+      <main className={`editor-layout${catalogCollapsed ? ' editor-layout-catalog-collapsed' : ''}${propertiesCollapsed ? ' editor-layout-properties-collapsed' : ''}`}>
+        <CatalogPanel
+          assets={assets}
+          selectedAssetId={selectedAssetId}
+          disabled={isEditingDisabled || hasBoundaryDraft || assetQuery.isError}
+          collapsed={catalogCollapsed}
+          onSelect={selectAsset}
+          onToggle={() => setCatalogCollapsed((collapsed) => !collapsed)}
+        />
         <section className="canvas-column" aria-label="庭の3D編集エリア">
           <div className="canvas-tools">
             <span className="canvas-tool-hint">{canvasHint}</span>
@@ -235,10 +234,12 @@ export function EditorPage({ gardenId }: EditorPageProps) {
           selectedAsset={selectedAsset}
           tool={tool}
           disabled={isEditingDisabled}
+          collapsed={propertiesCollapsed}
           onSelectObject={selectObject}
           onSetTool={setTool}
           onDuplicate={duplicateSelected}
           onDelete={deleteSelected}
+          onToggle={() => setPropertiesCollapsed((collapsed) => !collapsed)}
         />
       </main>
     </div>
