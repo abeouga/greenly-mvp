@@ -1,0 +1,12 @@
+{
+  "time": "2026-10-01T13:30:25.200036+00:00",
+  "mysql_data_directory": "D:\\GreenlyVerification\\20261001T133019-e43b4e2b\\data",
+  "mysql_port": 52409,
+  "database": "greenly_e2e",
+  "existing_mysql_service_modified": false,
+  "result": "passed",
+  "mysql_version": "8.0.45",
+  "verify:api": 0,
+  "test:e2e": 0,
+  "isolated_mysql_stopped": true
+}

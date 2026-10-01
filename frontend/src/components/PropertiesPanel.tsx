@@ -70,7 +70,7 @@ export function PropertiesPanel({
   }
 
   return (
-    <aside className="editor-panel properties-panel">
+    <aside id="properties-panel" className="editor-panel properties-panel">
       <section className="placed-section">
         <div className="panel-heading panel-heading-row">
           <div>

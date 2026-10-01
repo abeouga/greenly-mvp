@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "366ed135-6b46-4e81-b88d-331a086edb69",
+  "id": "7ed13e0e-dced-4341-a7d0-7f665ddb63f1",
   "revision": 1,
-  "name": "E2E roundtrip 1790430938774",
+  "name": "E2E roundtrip 1790861738145",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "4fe998d6-f87f-4713-82e2-4c8d9011a650",
+      "id": "5f3afee7-2249-4366-ba82-da685dbd1a79",
       "assetId": "tree_oak",
       "position": {
-        "x": 0.8133744783322636,
+        "x": 0.813374478332259,
         "y": 0,
-        "z": -0.000001111111114881656
+        "z": -0.0000011111111088829822
       },
       "rotation": {
         "x": 0,
@@ -25,5 +25,6 @@
         "z": 1.25
       }
     }
-  ]
+  ],
+  "photo": null
 }

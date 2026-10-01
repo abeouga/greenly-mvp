@@ -9,12 +9,15 @@
   "scripts": {
     "dev:web": "npm --workspace frontend run dev",
     "dev:web:e2e": "npm --workspace frontend run dev -- --port 15174",
-    "dev:api": "node scripts/maven.mjs dev",
-    "precheck": "npm run typecheck:web && npm run typecheck:e2e && npm run lint && npm run compile:api",
+    "dev:api": "node scripts/api.mjs dev",
+    "migrate:api": "node scripts/api.mjs migrate",
+    "verify:api": "node scripts/api.mjs verify",
+    "lint:api": "node scripts/api.mjs lint",
+    "precheck": "npm run typecheck:web && npm run typecheck:e2e && npm run lint && npm run lint:api && npm run compile:api",
     "typecheck:web": "npm --workspace frontend run typecheck",
     "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json",
     "lint": "eslint frontend/src e2e scripts playwright.config.ts",
-    "compile:api": "node scripts/maven.mjs compile",
+    "compile:api": "node scripts/api.mjs compile",
     "build:web": "npm --workspace frontend run build",
     "test:e2e": "playwright test",
     "assets:generate": "node scripts/generate-assets.mjs"

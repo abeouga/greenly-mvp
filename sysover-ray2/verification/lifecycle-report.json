@@ -1,56 +1,56 @@
 {
   "result": "passed",
   "test": "GreenlyController real start/stop/restart with occupied preferred ports",
-  "overlaySource": "C:\\Users\\hanam\\Desktop\\\u30B7\u30B9\u30AA\u30FC\u30D0\u30FC\u30EC\u30A42\\SysOverRay",
-  "greenlyRoot": "C:\\Users\\hanam\\Desktop\\gleenly-mvp",
+  "overlaySource": "sysover-ray2/SysOverRay",
+  "greenlyRoot": "gleenly-mvp",
   "observations": [
     {
       "step": "baseline",
-      "frontendHealthy": false,
-      "frontendUrl": null,
-      "backendHealthy": false,
-      "backendUrl": null,
-      "observedAt": "2026-09-26T22:44:48.6568206+09:00"
+      "frontendHealthy": true,
+      "frontendUrl": "http://127.0.0.1:5173",
+      "backendHealthy": true,
+      "backendUrl": "http://127.0.0.1:8080",
+      "observedAt": "2026-10-01T01:19:38.3833817+09:00"
     },
     {
       "step": "start",
       "frontendHealthy": true,
-      "frontendUrl": "http://127.0.0.1:5174",
+      "frontendUrl": "http://127.0.0.1:5175",
       "backendHealthy": true,
       "backendUrl": "http://127.0.0.1:8080",
-      "observedAt": "2026-09-26T22:45:09.7273366+09:00"
+      "observedAt": "2026-10-01T01:19:44.95693+09:00"
     },
     {
       "step": "stop",
-      "frontendHealthy": false,
-      "frontendUrl": "http://127.0.0.1:5174",
-      "backendHealthy": false,
+      "frontendHealthy": true,
+      "frontendUrl": "http://127.0.0.1:5173",
+      "backendHealthy": true,
       "backendUrl": "http://127.0.0.1:8080",
-      "observedAt": "2026-09-26T22:45:14.4871827+09:00"
+      "observedAt": "2026-10-01T01:19:47.263251+09:00"
     },
     {
       "step": "start-after-stop",
       "frontendHealthy": true,
-      "frontendUrl": "http://127.0.0.1:5174",
+      "frontendUrl": "http://127.0.0.1:5175",
       "backendHealthy": true,
       "backendUrl": "http://127.0.0.1:8080",
-      "observedAt": "2026-09-26T22:45:35.5194375+09:00"
+      "observedAt": "2026-10-01T01:19:55.7975702+09:00"
     },
     {
       "step": "restart",
       "frontendHealthy": true,
-      "frontendUrl": "http://127.0.0.1:5174",
+      "frontendUrl": "http://127.0.0.1:5175",
       "backendHealthy": true,
       "backendUrl": "http://127.0.0.1:8080",
-      "observedAt": "2026-09-26T22:45:59.6427229+09:00"
+      "observedAt": "2026-10-01T01:20:05.2005228+09:00"
     },
     {
       "step": "final-stop",
-      "frontendHealthy": false,
-      "frontendUrl": "http://127.0.0.1:5174",
-      "backendHealthy": false,
+      "frontendHealthy": true,
+      "frontendUrl": "http://127.0.0.1:5173",
+      "backendHealthy": true,
       "backendUrl": "http://127.0.0.1:8080",
-      "observedAt": "2026-09-26T22:46:04.1386505+09:00"
+      "observedAt": "2026-10-01T01:20:07.675301+09:00"
     }
   ]
 }

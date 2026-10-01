@@ -11,28 +11,36 @@ public sealed class GreenlyController
     private readonly OverlaySettings _settings;
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
     private Process? _launcher;
+    private readonly ProjectProcesses _processes;
+    private bool _projectRunning;
+    private bool LauncherActive => _launcher is { HasExited: false };
     private int? _frontendPort;
     private int? _backendPort;
-    private int? _frontendPortBeforeStart;
+    private HashSet<int> _frontendPortsBeforeStart = [];
     private int? _backendPortBeforeStart;
     private bool? _ownsBackend;
     private string? _stopSignalPath;
     private ServiceStatus _lastStatus = new(false, false, null, null);
 
-    public GreenlyController(OverlaySettings settings) => _settings = settings;
+    public GreenlyController(OverlaySettings settings)
+    {
+        _settings = settings;
+        _processes = new ProjectProcesses(settings.ProjectRoot);
+    }
 
-    public bool CanStart => _launcher is null || _launcher.HasExited;
-    public bool CanStop => !CanStart;
+    public bool CanStart => !LauncherActive && !_projectRunning;
+    public bool CanStop => LauncherActive || _projectRunning;
     public string? FrontendUrl => _lastStatus.FrontendUrl;
 
     public async Task<ServiceStatus> GetStatusAsync()
     {
-        var launcherActive = !CanStart;
+        var launcherActive = LauncherActive;
+        _projectRunning = await _processes.AnyAsync();
         var frontendPorts = _frontendPort is int webPort
             ? [webPort]
             : Enumerable.Range(_settings.FrontendPortRangeStart, _settings.FrontendPortRangeEnd - _settings.FrontendPortRangeStart + 1);
         var backendPorts = _backendPort is int apiPort ? [apiPort] : _settings.BackendPorts;
-        var frontendTask = CheckFrontendAsync(frontendPorts, launcherActive ? _frontendPortBeforeStart : null, launcherActive);
+        var frontendTask = CheckFrontendAsync(frontendPorts, launcherActive ? _frontendPortsBeforeStart : null, launcherActive);
         var backendTask = CheckBackendAsync(backendPorts, launcherActive ? _backendPortBeforeStart : null);
         await Task.WhenAll(frontendTask, backendTask);
         var frontend = await frontendTask;
@@ -48,7 +56,8 @@ public sealed class GreenlyController
     public async Task StartAsync()
     {
         ValidateConfiguration();
-        if (!CanStart)
+        await GetStatusAsync();
+        if (LauncherActive || (_projectRunning && _lastStatus.BothHealthy))
         {
             await WaitForStatusAsync(status => status.BothHealthy, _settings.StartupTimeoutSeconds,
                 "Greenlyの起動確認がタイムアウトしました。ログを確認してください。");
@@ -57,12 +66,17 @@ public sealed class GreenlyController
 
         var candidateWebPorts = Enumerable.Range(_settings.FrontendPortRangeStart,
             _settings.FrontendPortRangeEnd - _settings.FrontendPortRangeStart + 1);
-        var existingFrontend = await CheckFrontendAsync(candidateWebPorts, oldPort: null, requireNew: false);
+        var occupiedWebPorts = new HashSet<int>();
+        foreach (var port in candidateWebPorts)
+        {
+            if ((await CheckFrontendAsync([port], oldPorts: null, requireNew: false)).Healthy)
+                occupiedWebPorts.Add(port);
+        }
         var existingBackend = await CheckBackendAsync(_settings.BackendPorts, oldPort: null);
         // A stopped service may leave its last detected port in the controller.
         // Only a service that is healthy immediately before launch may be treated
         // as an existing process that the new managed session must not claim.
-        _frontendPortBeforeStart = existingFrontend.Healthy ? existingFrontend.Port : null;
+        _frontendPortsBeforeStart = occupiedWebPorts;
         _backendPortBeforeStart = existingBackend.Healthy ? existingBackend.Port : null;
         _frontendPort = null;
         _backendPort = null;
@@ -102,38 +116,29 @@ public sealed class GreenlyController
 
     public async Task StopAsync()
     {
-        if (CanStart)
-            throw new InvalidOperationException("このオーバーレイから起動したGreenlyプロセスがありません。既存プロセスは停止対象にしません。");
-
-        var launcher = _launcher!;
-        var frontendPort = _frontendPort;
-        var ownsBackend = _ownsBackend;
-        var backendPort = _backendPort;
-        AppLog.Write($"Stopping Greenly launcher PID {launcher.Id}.");
-        try
+        if (LauncherActive && _stopSignalPath is not null)
         {
-            if (!launcher.HasExited && _stopSignalPath is not null)
-                await File.WriteAllTextAsync(_stopSignalPath, "stop");
+            await File.WriteAllTextAsync(_stopSignalPath, "stop");
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.ShutdownTimeoutSeconds));
-            await launcher.WaitForExitAsync(timeout.Token);
+            try { await _launcher!.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException) { AppLog.Write("Graceful stop timed out; stopping verified project processes."); }
         }
-        catch (InvalidOperationException) { }
-        catch (OperationCanceledException) { throw new TimeoutException("Greenlyの停止処理がタイムアウトしました。"); }
-
-        launcher.Dispose();
+        await _processes.StopAsync();
+        _launcher?.Dispose();
         _launcher = null;
         _stopSignalPath = null;
-        await WaitForStatusAsync(status =>
-            (frontendPort is null || !status.FrontendHealthy) &&
-            (ownsBackend != true || backendPort is null || !status.BackendHealthy),
-            _settings.ShutdownTimeoutSeconds,
-            "このオーバーレイから起動したGreenlyサービスが停止しませんでした。");
-        AppLog.Write("Managed Greenly process tree stopped.");
+        _frontendPort = null;
+        _backendPort = null;
+        _frontendPortsBeforeStart.Clear();
+        _ownsBackend = null;
+        _projectRunning = false;
+        await GetStatusAsync();
+        AppLog.Write("Configured Greenly project processes stopped.");
     }
 
     public async Task RestartAsync()
     {
-        if (!CanStart) await StopAsync();
+        await StopAsync();
         await Task.Delay(500);
         await StartAsync();
     }
@@ -154,7 +159,7 @@ public sealed class GreenlyController
         }
     }
 
-    private async Task<(bool Healthy, int? Port)> CheckFrontendAsync(IEnumerable<int> ports, int? oldPort, bool requireNew)
+    private async Task<(bool Healthy, int? Port)> CheckFrontendAsync(IEnumerable<int> ports, IReadOnlySet<int>? oldPorts, bool requireNew)
     {
         int? oldHealthyPort = null;
         foreach (var port in ports)
@@ -166,7 +171,7 @@ public sealed class GreenlyController
                 var content = await response.Content.ReadAsStringAsync();
                 if (content.Contains("Greenly", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (port != oldPort) return (true, port);
+                    if (oldPorts?.Contains(port) != true) return (true, port);
                     oldHealthyPort = port;
                 }
             }

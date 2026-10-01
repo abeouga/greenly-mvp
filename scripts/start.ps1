@@ -44,7 +44,9 @@ function Test-GreenlyApi {
   param([int]$Port)
 
   try {
-    $assets = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/assets" -TimeoutSec 3
+    $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/api/assets" -TimeoutSec 3 -UseBasicParsing
+    if ($response.Headers['X-Greenly-Backend'] -ne 'fastapi') { return $false }
+    $assets = $response.Content | ConvertFrom-Json
     $ids = @($assets | ForEach-Object { $_.id })
     return @($expectedAssetIds | Where-Object { $ids -notcontains $_ }).Count -eq 0
   } catch {
@@ -126,7 +128,7 @@ function Wait-ForGreenlyWeb {
   throw 'Web画面が45秒以内に起動しませんでした。このコンソールのWebログを確認してください。'
 }
 
-foreach ($required in @('node.exe', 'npm.cmd', 'java.exe')) {
+foreach ($required in @('node.exe', 'npm.cmd', 'uv.exe')) {
   if (-not (Get-Command $required -ErrorAction SilentlyContinue)) {
     throw "$required がPATH上にありません。READMEの必要環境を確認してください。"
   }
@@ -134,8 +136,8 @@ foreach ($required in @('node.exe', 'npm.cmd', 'java.exe')) {
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'node_modules') -PathType Container)) {
   throw "JavaScript依存関係がありません。次を実行してください: npm install (場所: $repoRoot)"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'backend\mvnw.cmd') -PathType Leaf)) {
-  throw "Maven Wrapperが見つかりません: $repoRoot\backend\mvnw.cmd"
+if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'backend\pyproject.toml') -PathType Leaf)) {
+  throw "Python API設定が見つかりません: $repoRoot\backend\pyproject.toml"
 }
 
 $modelDir = Join-Path $repoRoot 'frontend\public\models'
@@ -199,7 +201,7 @@ try {
       throw 'GREENLY_DB_PASSWORDが空です。環境変数、.env、または非表示入力で設定してください。'
     }
 
-    $apiCommand = "`$env:SERVER_ADDRESS='127.0.0.1'; `$env:SERVER_PORT='$apiPort'; Write-Host 'Greenly API: http://127.0.0.1:$apiPort'; npm run dev:api"
+    $apiCommand = "`$env:GREENLY_PROFILE='dev'; `$env:GREENLY_HOST='127.0.0.1'; `$env:GREENLY_PORT='$apiPort'; Write-Host 'Greenly API: http://127.0.0.1:$apiPort'; npm run dev:api"
     $apiProcess = Start-GreenlyProcess -Command $apiCommand
     Write-Host "API起動中: 127.0.0.1:$apiPort (PID $($apiProcess.Id))"
     Wait-ForGreenlyApi -Port $apiPort -Process $apiProcess
@@ -208,7 +210,7 @@ try {
   }
 
   $apiTarget = "http://127.0.0.1:$apiPort"
-  $webCommand = "Remove-Item Env:GREENLY_DB_USER, Env:GREENLY_DB_PASSWORD, Env:GREENLY_DB_URL -ErrorAction SilentlyContinue; `$env:GREENLY_API_TARGET='$apiTarget'; Write-Host 'Greenly Web: http://127.0.0.1:$webPort'; npm --workspace frontend run dev -- --host 127.0.0.1 --port $webPort --strictPort"
+  $webCommand = "Remove-Item Env:GREENLY_DB_USER, Env:GREENLY_DB_PASSWORD, Env:GREENLY_DB_URL, Env:GREENLY_E2E_DB_USER, Env:GREENLY_E2E_DB_PASSWORD, Env:GREENLY_E2E_DB_URL -ErrorAction SilentlyContinue; `$env:GREENLY_API_TARGET='$apiTarget'; Write-Host 'Greenly Web: http://127.0.0.1:$webPort'; npm --workspace frontend run dev -- --host 127.0.0.1 --port $webPort --strictPort"
   $webProcess = Start-GreenlyProcess -Command $webCommand
   Write-Host "Web起動中: 127.0.0.1:$webPort (PID $($webProcess.Id))"
   Wait-ForGreenlyWeb -Port $webPort -Process $webProcess

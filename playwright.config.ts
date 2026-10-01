@@ -27,7 +27,7 @@ export default defineConfig({
       url: `${e2eApiUrl}/api/assets`,
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { SPRING_PROFILES_ACTIVE: 'e2e', SERVER_PORT: '18080' },
+      env: { GREENLY_PROFILE: 'e2e', GREENLY_HOST: '127.0.0.1', GREENLY_PORT: '18080' },
     },
     {
       command: 'npm run dev:web:e2e',

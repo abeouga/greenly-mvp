@@ -6,7 +6,7 @@
 
 - 正本はJSON化できるGardenDocumentです。Three.jsのScene/Object3D/Meshを業務データや永続化データにしません。
 - フロントは、通常UI、編集ルール、Zustandの編集中状態、TanStack Queryのサーバーデータ、HTTP、R3F描画を分けます。
-- バックエンドは、Request/Response DTO、ドメイン検証、JPA Entityを分けます。EntityをAPIへ直接返しません。
+- バックエンドは、Pydantic Request/Response DTO、ドメイン検証、SQLAlchemy Entityを分けます。EntityをAPIへ直接返しません。
 - 庭の保存は全体スナップショットです。各ポインター移動からAPIを呼ばず、PUTをMySQLトランザクション内でrevision比較して行います。
 - ローカルデモ所有者はサーバー側のdev/e2e環境だけで決定し、クライアントからownerIdを受け付けません。デモ設定は127.0.0.1に限定します。
 - 1 Three.js unit = 1m、Yが上、地面Y=0、庭中心が原点です。配置基準点だけを庭範囲に制限します。回転はY軸、拡縮は一様です。
@@ -24,7 +24,7 @@
 
 ## 変更の記録と安全性
 
-- DB変更はFlywayマイグレーションで行い、起動時に既存データを消しません。アセットseedは繰り返し実行しても既存の意味を変更しません。
+- DB変更はAlembicマイグレーションで行い、起動時に既存データを消しません。旧Flyway DBの採用は構造照合とバックアップ後に行います。アセットseedは繰り返し実行しても既存の意味を変更しません。
 - 外部入力をすべて検証します。エラー応答にスタックトレース、機密値、不要なリクエスト本文を含めません。
 - 重要な形式・永続化・認証境界の変更は `docs/` にContext/Decision/Alternatives/Consequencesを記録します。
 - 秘密情報、機械固有設定、実利用者データをGitやログ、テスト成果物に含めません。

@@ -1,0 +1,1 @@
+ALTER TABLE gardens ADD COLUMN photo_json LONGTEXT NULL;

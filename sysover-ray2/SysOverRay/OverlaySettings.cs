@@ -4,7 +4,7 @@ namespace SysOverRay;
 
 public sealed class OverlaySettings
 {
-    public string GreenlyRoot { get; set; } = @"..\..\gleenly-mvp";
+    public string GreenlyRoot { get; set; } = @"..\..";
     public int StartupTimeoutSeconds { get; set; } = 120;
     public int ShutdownTimeoutSeconds { get; set; } = 20;
     public int FrontendPortRangeStart { get; set; } = 5173;

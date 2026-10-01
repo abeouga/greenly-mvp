@@ -1,5 +1,5 @@
 {
-  "GreenlyRoot": "..\\..\\gleenly-mvp",
+  "GreenlyRoot": "..\\..",
   "StartupTimeoutSeconds": 180,
   "ShutdownTimeoutSeconds": 20,
   "FrontendPortRangeStart": 5173,

@@ -16,7 +16,7 @@ const categories: Record<string, string> = {
 
 export function CatalogPanel({ assets, selectedAssetId, disabled, onSelect }: CatalogPanelProps) {
   return (
-    <aside className="editor-panel catalog-panel">
+    <aside id="catalog-panel" className="editor-panel catalog-panel">
       <div className="panel-heading">
         <span className="eyebrow">CATALOG</span>
         <h2>オブジェクト</h2>

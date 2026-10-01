@@ -7,8 +7,8 @@
 ## Decision
 
 - Frontend: React 19 + TypeScript + Vite、R3F 9 + Drei 10、Zustand、TanStack Query。Viteの `/api` proxyで同一オリジン通信します。
-- Backend: Java 21向けSpring Boot、Web、Validation、Data JPA、MySQL、Flyway。`dev`/`e2e` profileのデモ利用者はサーバー側固定値で、`server.address=127.0.0.1` に制限します。
-- 保存形式: `{schemaVersion:1,id,revision,name,width,depth,objects}`。`revision`は同時更新制御、`schemaVersion`は形式識別です。
+- Backend: Python 3.12、FastAPI、Pydantic v2、同期SQLAlchemy 2、PyMySQL、MySQL、Alembic。`dev`/`e2e` profileのデモ利用者はサーバー側固定値で、`GREENLY_HOST=127.0.0.1` に制限します。移行判断と旧DB引き継ぎは`docs/fastapi-migration.md`に記録します。
+- 保存形式: `{schemaVersion:1,id,revision,name,width,depth,objects,photo}`。`photo`は`null`または元画像・投影四隅・多角形輪郭です。`revision`は同時更新制御、`schemaVersion`は形式識別です。写真追加は既存形式の任意項目として扱います。
 - 単位: Three.js 1 unit = 1m。X/Zだけ庭の中心からの座標、配置Y=0、回転はY軸ラジアン、scaleはxyz同値の0.25..3です。
 - 配置アセットIDは `tree_oak`, `shrub_boxwood`, `brick_paver`, `bench_wood` とし、GLBはリポジトリへ同梱します。生成元はこのリポジトリの基本形状スクリプトです。
 
@@ -32,4 +32,4 @@ GardenDocumentとThree.jsのランタイムを分離するため、表示実装�
 
 ## Rollback
 
-初期DBはFlyway V1で作成します。既存スキーマを破壊するマイグレーションや起動時のテーブル再作成は行いません。GardenDocumentはschemaVersion 1で保存し、将来形式変更時は読み書き互換を別途決定します。
+初期DBはAlembic 0001で作成し、写真保存列を0002で追加します。旧Flyway V1/V2 DBは構造・履歴照合とバックアップ後に対応版として記録し、既存データとFlyway履歴を維持します。既存スキーマを破壊するマイグレーションや起動時のテーブル再作成は行いません。GardenDocumentはschemaVersion 1で保存し、将来形式変更時は読み書き互換を別途決定します。投影方法と制約は`docs/geometry-photo.md`を参照してください。

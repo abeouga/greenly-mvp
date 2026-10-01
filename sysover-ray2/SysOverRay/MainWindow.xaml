@@ -115,7 +115,7 @@
                            Foreground="{StaticResource MutedBrush}"
                            FontSize="10"
                            TextTrimming="CharacterEllipsis"
-                           VerticalAlignment="Bottom">起動で管理対象を開始します</TextBlock>
+                           VerticalAlignment="Bottom">このGreenlyの起動・停止・再起動</TextBlock>
             </Grid>
 
             <Grid x:Name="CompactPanel" Grid.Row="1" Margin="14,0,14,12" Visibility="Collapsed">

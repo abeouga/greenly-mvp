@@ -20,6 +20,18 @@ export interface GardenDocument {
   width: number;
   depth: number;
   objects: GardenObject[];
+  photo: GardenPhoto | null;
+}
+
+export interface ImagePoint { x: number; y: number }
+
+export interface GardenPhoto {
+  dataUrl: string;
+  imageWidth: number;
+  imageHeight: number;
+  // near left, near right, far right, far left, normalized to the original image
+  corners: ImagePoint[];
+  boundary: ImagePoint[];
 }
 
 export interface GardenSummary {

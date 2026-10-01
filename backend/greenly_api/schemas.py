@@ -1,0 +1,100 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+
+class NamedRequest(ApiModel):
+    name: str = Field(min_length=1)
+    width: float = Field(ge=1, le=50)
+    depth: float = Field(ge=1, le=50)
+
+    @field_validator("name")
+    @classmethod
+    def valid_name(cls, value: str) -> str:
+        if not value.strip() or len(value.encode("utf-16-le")) // 2 > 120:
+            raise ValueError("invalid name")
+        return value
+
+
+class CreateGardenRequest(NamedRequest):
+    pass
+
+
+class Vector(ApiModel):
+    x: float
+    y: float
+    z: float
+
+
+class GardenObject(ApiModel):
+    id: str = Field(min_length=1)
+    assetId: str = Field(min_length=1)
+    position: Vector
+    rotation: Vector
+    scale: Vector
+
+    @field_validator("id", "assetId")
+    @classmethod
+    def nonblank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("blank value")
+        return value
+
+
+class ImagePoint(ApiModel):
+    x: float
+    y: float
+
+
+class GardenPhoto(ApiModel):
+    dataUrl: str
+    imageWidth: int
+    imageHeight: int
+    corners: list[ImagePoint]
+    boundary: list[ImagePoint]
+
+
+class GardenDocumentRequest(NamedRequest):
+    schemaVersion: int = Field(ge=1, le=1)
+    id: str = Field(min_length=1)
+    revision: int = Field(ge=0, le=9223372036854775807)
+    objects: list[GardenObject] = Field(max_length=200)
+    photo: GardenPhoto | None = None
+
+
+class GardenDocument(ApiModel):
+    schemaVersion: int = 1
+    id: str
+    revision: int
+    name: str
+    width: float
+    depth: float
+    objects: list[GardenObject]
+    photo: GardenPhoto | None
+
+
+class GardenSummary(ApiModel):
+    id: str
+    name: str
+    width: float
+    depth: float
+    revision: int
+    updatedAt: datetime
+
+
+class BaseDimensions(ApiModel):
+    width: float
+    height: float
+    depth: float
+
+
+class AssetResponse(ApiModel):
+    id: str
+    name: str
+    category: str
+    modelUrl: str
+    baseDimensions: BaseDimensions

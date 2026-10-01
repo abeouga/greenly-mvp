@@ -62,7 +62,11 @@ public partial class MainWindow : Window
     private async Task RefreshStatusAsync()
     {
         if (_operationRunning) return;
-        try { ApplyStatus(await _controller.GetStatusAsync()); }
+        try
+        {
+            var status = await _controller.GetStatusAsync();
+            if (!_operationRunning) ApplyStatus(status);
+        }
         catch (Exception ex)
         {
             AppLog.Write($"Status refresh failed: {ex}");
@@ -79,7 +83,7 @@ public partial class MainWindow : Window
 
         if (status.BothHealthy)
         {
-            SummaryText.Text = _controller.CanStop ? "Greenly 稼働中" : "既存稼働中（起動で管理）";
+            SummaryText.Text = "Greenly 稼働中";
             CompactStatusText.Text = "稼働中";
         }
         else if (!status.BackendHealthy && !status.FrontendHealthy)
@@ -95,8 +99,8 @@ public partial class MainWindow : Window
 
         StartButton.IsEnabled = _controller.CanStart;
         StopButton.IsEnabled = _controller.CanStop;
-        RestartButton.IsEnabled = _controller.CanStop;
-        CompactRestartButton.IsEnabled = _controller.CanStop;
+        RestartButton.IsEnabled = true;
+        CompactRestartButton.IsEnabled = true;
     }
 
     private static void SetServiceStatus(System.Windows.Shapes.Ellipse primaryDot,
