@@ -3,6 +3,15 @@ import type { GardenPhoto, ImagePoint } from '../types/garden';
 // A projective transform maps the metric ground plane to the four image corners.
 // It aligns only points on y=0; a single photograph cannot locate tall objects in 3D.
 export function homography(from: ImagePoint[], to: ImagePoint[]) {
+  const h = homographyMatrix(from, to);
+  if (!h) return null;
+  return ({ x, y }: ImagePoint): ImagePoint => {
+    const w = h[6] * x + h[7] * y + 1;
+    return { x: (h[0] * x + h[1] * y + h[2]) / w, y: (h[3] * x + h[4] * y + h[5]) / w };
+  };
+}
+
+export function homographyMatrix(from: ImagePoint[], to: ImagePoint[]) {
   if (from.length !== 4 || to.length !== 4) return null;
   const rows = from.map(({ x, y }, i) => [
     [x, y, 1, 0, 0, 0, -x * to[i].x, -y * to[i].x, to[i].x],
@@ -21,11 +30,7 @@ export function homography(from: ImagePoint[], to: ImagePoint[]) {
       for (let k = col; k < 9; k++) rows[row][k] -= factor * rows[col][k];
     }
   }
-  const h = [...rows.map((row) => row[8]), 1];
-  return ({ x, y }: ImagePoint): ImagePoint => {
-    const w = h[6] * x + h[7] * y + 1;
-    return { x: (h[0] * x + h[1] * y + h[2]) / w, y: (h[3] * x + h[4] * y + h[5]) / w };
-  };
+  return [...rows.map((row) => row[8]), 1];
 }
 
 export const unitCorners = [
@@ -79,6 +84,17 @@ export function validSurface(photo: GardenPhoto) {
   if (!validCorners(photo.corners) || !validBoundary(photo.boundary)) return false;
   return photo.boundary.every((point) => photo.corners.every((a, index) =>
     orientation(a, photo.corners[(index + 1) % 4], point) <= 0.000001));
+}
+
+// Map the drawn outline's image bounds to the garden's width/depth.
+// The four transform anchors are derived data, not four user clicks.
+export function withPhotoBoundary(photo: GardenPhoto, boundary: ImagePoint[]): GardenPhoto {
+  if (boundary.length === 0) return { ...photo, corners: [], boundary };
+  const left = Math.min(...boundary.map((p) => p.x)), right = Math.max(...boundary.map((p) => p.x));
+  const top = Math.min(...boundary.map((p) => p.y)), bottom = Math.max(...boundary.map((p) => p.y));
+  return { ...photo, boundary, corners: [
+    { x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top },
+  ] };
 }
 
 export function pointInPolygon(point: ImagePoint, polygon: ImagePoint[]) {

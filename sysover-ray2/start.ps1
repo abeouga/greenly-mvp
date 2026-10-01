@@ -18,9 +18,20 @@ public static class SysOverRayWindowActivation
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hWnd, StringBuilder className, int count);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr hWnd, StringBuilder title, int count);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
     [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hWnd, int command);
+    [DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hWnd);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+
+    public static uint GetForegroundProcessId()
+    {
+        uint processId;
+        GetWindowThreadProcessId(GetForegroundWindow(), out processId);
+        return processId;
+    }
 
     public static IntPtr FindMainWindow(uint targetProcessId)
     {
@@ -34,6 +45,9 @@ public static class SysOverRayWindowActivation
             var className = new StringBuilder(256);
             GetClassName(hWnd, className, className.Capacity);
             if (!className.ToString().StartsWith("HwndWrapper[SysOverRay;", StringComparison.Ordinal)) return true;
+            var title = new StringBuilder(256);
+            GetWindowText(hWnd, title, title.Capacity);
+            if (title.ToString() != "Greenly 起動オーバーレイ") return true;
 
             found = hWnd;
             return false;
@@ -44,13 +58,20 @@ public static class SysOverRayWindowActivation
 
     public static void Activate(IntPtr hWnd)
     {
+        const uint SWP_NOSIZE = 0x0001;
+        const uint SWP_NOMOVE = 0x0002;
+        const uint SWP_SHOWWINDOW = 0x0040;
         ShowWindowAsync(hWnd, 9);
-        ShowWindowAsync(hWnd, 5);
+        SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+        BringWindowToTop(hWnd);
         SetForegroundWindow(hWnd);
     }
 }
 '@
 }
+
+$activationShell = New-Object -ComObject WScript.Shell
+Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
 
 if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
   throw "SysOverRay.exeが見つかりません: $executable"
@@ -64,24 +85,14 @@ try {
       try { return [IO.Path]::GetFullPath($_.ExecutablePath) -ieq $targetExecutable } catch { return $false }
     } | Sort-Object -Property CreationDate -Descending)
 
-  if ($existingProcesses.Count -gt 0) {
-    $deadline = [DateTime]::UtcNow.AddSeconds(12)
-    do {
-      foreach ($candidate in $existingProcesses) {
-        $stillRunning = Get-CimInstance Win32_Process -Filter "ProcessId=$($candidate.ProcessId)" -ErrorAction SilentlyContinue
-        if ($null -eq $stillRunning) { continue }
-        $window = [SysOverRayWindowActivation]::FindMainWindow([uint32]$candidate.ProcessId)
-        if ($window -eq [IntPtr]::Zero) { continue }
-        [SysOverRayWindowActivation]::Activate($window)
-        Start-Sleep -Milliseconds 250
-        if ([SysOverRayWindowActivation]::IsWindowVisible($window)) {
-          Write-Host "既存のSysOverRayを表示しました (PID $($candidate.ProcessId))。"
-          return
-        }
-      }
-      Start-Sleep -Milliseconds 250
-    } while ([DateTime]::UtcNow -lt $deadline)
-    throw '既存のSysOverRayプロセスはありますが、オーバーレイウィンドウを表示できませんでした。重複起動は行いません。'
+  foreach ($candidate in $existingProcesses) {
+    $current = Get-CimInstance Win32_Process -Filter "ProcessId=$($candidate.ProcessId)" -ErrorAction SilentlyContinue
+    if ($null -eq $current) { continue }
+    if ($current.ExecutablePath -ine $targetExecutable -or $current.CreationDate -ne $candidate.CreationDate) { continue }
+    $oldProcess = Get-Process -Id $candidate.ProcessId -ErrorAction Stop
+    Stop-Process -Id $candidate.ProcessId -Force -ErrorAction Stop
+    if (-not $oldProcess.WaitForExit(5000)) { throw '既存のSysOverRayを終了できませんでした。' }
+    Write-Host "旧オーバーレイを終了しました (PID $($candidate.ProcessId))。"
   }
 
   & $setup
@@ -101,19 +112,33 @@ try {
   }
 
   $process = Start-Process -FilePath $executable -WorkingDirectory (Join-Path $PSScriptRoot 'app') -PassThru
-  $deadline = [DateTime]::UtcNow.AddSeconds(15)
+  $deadline = [DateTime]::UtcNow.AddSeconds(30)
   do {
     $process.Refresh()
     if ($process.HasExited) { throw "SysOverRayが起動後に終了しました (exit $($process.ExitCode))。" }
     $window = [SysOverRayWindowActivation]::FindMainWindow([uint32]$process.Id)
-    if ($window -ne [IntPtr]::Zero -and [SysOverRayWindowActivation]::IsWindowVisible($window)) {
-      Write-Host "SysOverRayの起動を確認しました (PID $($process.Id))。"
-      return
+    if ($window -ne [IntPtr]::Zero) {
+      [SysOverRayWindowActivation]::Activate($window)
+      [void]$activationShell.AppActivate('Greenly 起動オーバーレイ')
+      Start-Sleep -Milliseconds 250
+      if ([SysOverRayWindowActivation]::IsWindowVisible($window) -and
+          [SysOverRayWindowActivation]::GetForegroundWindow() -eq $window) {
+        $ui = [System.Windows.Automation.AutomationElement]::FromHandle($window)
+        $controlsReady = $true
+        foreach ($id in @('StartButton','StopButton','RestartButton')) {
+          $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $id)
+          if ($null -eq $ui.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)) { $controlsReady = $false }
+        }
+        if ($controlsReady) {
+          Write-Host "SysOverRayの操作画面・前面表示を確認しました (PID $($process.Id))。"
+          exit 0
+        }
+      }
     }
     Start-Sleep -Milliseconds 250
   } while ([DateTime]::UtcNow -lt $deadline)
-  throw "SysOverRayは起動しましたが、15秒以内にオーバーレイウィンドウを確認できませんでした (PID $($process.Id))。"
+  throw "SysOverRayは起動しましたが、30秒以内に操作画面の前面表示を確認できませんでした (PID $($process.Id))。"
 } catch {
-  Write-Error $_
+  Write-Error $_ -ErrorAction Continue
   exit 1
 }

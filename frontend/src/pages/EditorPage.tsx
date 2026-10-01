@@ -99,7 +99,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
       state.setSaveError('描画中の輪郭を確定または取消してから保存してください。'); return;
     }
     if (state.document.photo && !validSurface(state.document.photo)) {
-      state.setSaveError('四隅と輪郭を確定してから保存してください。'); return;
+      state.setSaveError('庭の輪郭を始点につないで確定してから保存してください。'); return;
     }
     const snapshot = structuredClone(state.document);
     state.setSaving(true);
@@ -171,7 +171,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
           <button type="button" onClick={save} disabled={isSaving || isTransformDragging}>再試行</button>
         </div>
       )}
-      {!photoReady && <div className="editor-alert photo-progress" role="status">{hasBoundaryDraft ? '庭の輪郭を描画中です。始点につないで確定するか、描画を取消してください。' : '写真の投影基準4点と庭の輪郭を指定してから保存してください。'}</div>}
+      {!photoReady && <div className="editor-alert photo-progress" role="status">{hasBoundaryDraft ? '庭の輪郭を描画中です。始点につないで確定するか、描画を取消してください。' : '写真上で庭の輪郭を描き、始点につないで確定してから保存してください。'}</div>}
       {assetQuery.isError && (
         <div className="editor-alert notice-error" role="alert">
           <span>オブジェクトカタログを読み込めませんでした。</span>
@@ -208,7 +208,8 @@ export function EditorPage({ gardenId }: EditorPageProps) {
               {viewMode === '3d' && <button type="button" onClick={() => commandCamera('home')} disabled={isEditingDisabled}>初期視点</button>}
             </div>
           </div>
-          {viewMode === 'photo' ? <PhotoOverlay document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled} /> : assetQuery.isLoading ? (
+          {viewMode === 'photo' ? <PhotoOverlay document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled}
+            retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed} /> : assetQuery.isLoading ? (
             <div className="canvas-loading" role="status">アセット一覧を読み込んでいます…</div>
           ) : (
             <GardenCanvas

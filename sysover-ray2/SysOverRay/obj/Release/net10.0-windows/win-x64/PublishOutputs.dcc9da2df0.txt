@@ -1,0 +1,3 @@
+C:\Users\hanam\Desktop\gleenly-mvp\sysover-ray2\app\SysOverRay.pdb
+C:\Users\hanam\Desktop\gleenly-mvp\sysover-ray2\app\overlay-settings.json
+C:\Users\hanam\Desktop\gleenly-mvp\sysover-ray2\app\SysOverRay.exe

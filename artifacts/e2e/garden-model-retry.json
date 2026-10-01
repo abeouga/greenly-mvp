@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "58059531-5d31-41ad-82df-d65904fa22b8",
+  "id": "475b79cf-2ba7-4e97-8b6f-1366362e4319",
   "revision": 1,
-  "name": "E2E model retry 1790870724308",
+  "name": "E2E model retry 1790866769278",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "375858c3-aaed-4b98-88bc-4ad684be9156",
+      "id": "03485a40-fe73-465a-9840-4896de61959a",
       "assetId": "tree_oak",
       "position": {
         "x": 0,
         "y": 0,
-        "z": -0.0000011111111088884032
+        "z": -0.0000011111111088877527
       },
       "rotation": {
         "x": 0,

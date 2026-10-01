@@ -29,7 +29,8 @@ export interface GardenPhoto {
   dataUrl: string;
   imageWidth: number;
   imageHeight: number;
-  // near left, near right, far right, far left, normalized to the original image
+  // Internal transform anchors (bottom left/right, top right/left).
+  // Derived from the outline bounds when drawing; preserved for older saved photos.
   corners: ImagePoint[];
   boundary: ImagePoint[];
 }

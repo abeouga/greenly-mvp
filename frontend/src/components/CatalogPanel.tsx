@@ -33,9 +33,7 @@ export function CatalogPanel({ assets, selectedAssetId, disabled, collapsed, onS
       </div>
       <div id="catalog-panel-content" className="side-panel-content" aria-hidden={collapsed}>
         <div className="panel-heading">
-          <span className="eyebrow">CATALOG</span>
-          <h2>オブジェクト</h2>
-          <p>種類を選び、地面をクリックして配置します。</p>
+          <h2>カタログ</h2>
         </div>
         <div className="asset-list">
           {assets.map((asset) => (

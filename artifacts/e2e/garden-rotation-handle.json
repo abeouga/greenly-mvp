@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "id": "54d9647e-3ad6-4808-9114-59f0a8528cef",
+  "id": "2a741330-15c4-4cae-8a72-bbf6f4a5671a",
   "revision": 1,
-  "name": "E2E rotation handle 1790870727776",
+  "name": "E2E rotation handle 1790866772910",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "6a7774ff-2621-4f93-8db5-389f258138eb",
+      "id": "e57a058c-13fe-4570-8217-5c73707a0f57",
       "assetId": "bench_wood",
       "position": {
         "x": 0,
         "y": 0,
-        "z": -0.0000011111111088877527
+        "z": -0.0000011111111148807886
       },
       "rotation": {
         "x": 0,
-        "y": 7.853984808578414,
+        "y": 7.853984808578426,
         "z": 0
       },
       "scale": {

@@ -1,12 +1,13 @@
-import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, TransformControls, useGLTF } from '@react-three/drei';
-import { BoxGeometry, BufferGeometry, DoubleSide, EdgesGeometry, Float32BufferAttribute, MathUtils, Plane, Shape, ShapeGeometry, Vector3, type Group } from 'three';
-import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { MathUtils, Plane, Vector3, type Group } from 'three';
 import { useEditorStore } from '../stores/editorStore';
 import type { GardenAsset, GardenDocument, GardenObject } from '../types/garden';
 import { RotationRing } from './RotationRing';
-import { homography, pointInPolygon, unitCorners, validSurface } from '../domain/photoProjection';
+import { GardenGround } from './GardenGround';
+import { BrokenObject, GardenModel, SelectionOutline } from './GardenModel';
+import { detectWebgl } from './webgl';
 
 interface RetryRequest {
   objectId: string;
@@ -39,7 +40,7 @@ export function GardenCanvas({ document, assets, selectedAssetId, disabled, retr
         <directionalLight position={[7, 12, 5]} intensity={2.1} />
         <CameraRig width={document.width} depth={document.depth} />
         <OrbitControls makeDefault enabled={!useEditorStore((state) => state.isTransformDragging)} enableDamping dampingFactor={0.08} maxPolarAngle={Math.PI / 2 + 0.08} minDistance={2} maxDistance={100} />
-        <GroundPlane document={document} selectedAsset={assets.find((asset) => asset.id === selectedAssetId) ?? null} disabled={disabled} />
+        <GardenGround document={document} selectedAsset={assets.find((asset) => asset.id === selectedAssetId) ?? null} disabled={disabled} />
         {document.objects.map((object) => {
           const asset = assetMap.get(object.assetId);
           if (!asset) return <BrokenObject key={object.id} object={object} />;
@@ -65,18 +66,6 @@ export function clearGardenModelCache(url: string) {
   useGLTF.clear(url);
 }
 
-function detectWebgl(): boolean {
-  try {
-    const canvas = window.document.createElement('canvas');
-    const context = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
-    if (!context) return false;
-    context.getExtension('WEBGL_lose_context')?.loseContext();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function CameraRig({ width, depth }: { width: number; depth: number }) {
   const cameraCommand = useEditorStore((state) => state.cameraCommand);
   const { camera, controls } = useThree();
@@ -97,109 +86,6 @@ function CameraRig({ width, depth }: { width: number; depth: number }) {
   }, [camera, cameraCommand.sequence, cameraCommand.view, controls, depth, width]);
 
   return null;
-}
-
-function GroundPlane({ document, selectedAsset, disabled }: { document: GardenDocument; selectedAsset: GardenAsset | null; disabled: boolean }) {
-  const press = useRef<{ x: number; y: number; pointerId: number } | null>(null);
-  const isDragging = useEditorStore((state) => state.isTransformDragging);
-  const outline = useMemo(() => groundOutline(document), [document.photo, document.width, document.depth]);
-  const grid = useMemo(() => makeGrid(document.width, document.depth, outline), [document.width, document.depth, outline]);
-  useEffect(() => () => grid.dispose(), [grid]);
-  const surface = useMemo(() => {
-    const shape = new Shape();
-    outline.forEach((point, index) => index === 0 ? shape.moveTo(point.x, -point.z) : shape.lineTo(point.x, -point.z));
-    shape.closePath();
-    return new ShapeGeometry(shape);
-  }, [outline]);
-  useEffect(() => () => surface.dispose(), [surface]);
-
-  function finishPlacement(event: { clientX: number; clientY: number; pointerId: number; point: { x: number; z: number }; stopPropagation: () => void }) {
-    const start = press.current;
-    press.current = null;
-    if (!start || start.pointerId !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
-    if (!selectedAsset || disabled || isDragging) return;
-    if (!pointInPolygon({ x: event.point.x, y: event.point.z }, outline.map((p) => ({ x: p.x, y: p.z })))) return;
-    event.stopPropagation();
-    useEditorStore.getState().addAssetAt(selectedAsset, event.point.x, event.point.z);
-  }
-
-  const groundLines = useMemo(() => makeBoundary(outline), [outline]);
-  useEffect(() => () => groundLines.dispose(), [groundLines]);
-
-  return (
-    <>
-      <mesh
-        name="garden-ground"
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.02, 0]}
-        onPointerDown={(event) => {
-          if (!selectedAsset || disabled || isDragging) return;
-          press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
-        }}
-        onPointerUp={finishPlacement}
-        onPointerCancel={() => { press.current = null; }}
-      >
-        <primitive object={surface} attach="geometry" />
-        <meshStandardMaterial color="#cbd5b8" roughness={0.98} side={DoubleSide} />
-      </mesh>
-      <lineSegments geometry={grid} position={[0, 0.003, 0]}>
-        <lineBasicMaterial color="#8a9a79" transparent opacity={0.34} />
-      </lineSegments>
-      <lineSegments geometry={groundLines} position={[0, 0.004, 0]}>
-        <lineBasicMaterial color="#617452" />
-      </lineSegments>
-    </>
-  );
-}
-
-function groundOutline(document: GardenDocument): { x: number; z: number }[] {
-  const photo = document.photo;
-  if (photo && validSurface(photo)) {
-    const inverse = homography(photo.corners, unitCorners);
-    if (inverse) return photo.boundary.map((point) => {
-      const p = inverse(point);
-      return { x: (p.x - 0.5) * document.width, z: (0.5 - p.y) * document.depth };
-    });
-  }
-  return [
-    { x: -document.width / 2, z: document.depth / 2 },
-    { x: document.width / 2, z: document.depth / 2 },
-    { x: document.width / 2, z: -document.depth / 2 },
-    { x: -document.width / 2, z: -document.depth / 2 },
-  ];
-}
-
-function makeGrid(width: number, depth: number, outline: { x: number; z: number }[]): BufferGeometry {
-  const positions: number[] = [];
-  const halfWidth = width / 2;
-  const halfDepth = depth / 2;
-  const polygon = outline.map((p) => ({ x: p.x, y: p.z }));
-  const addClipped = (a: { x: number; z: number }, b: { x: number; z: number }) => {
-    const segments = Math.ceil(Math.hypot(a.x - b.x, a.z - b.z) * 8);
-    for (let i = 0; i < segments; i++) {
-      const t = (i + 0.5) / segments;
-      if (!pointInPolygon({ x: a.x + (b.x - a.x) * t, y: a.z + (b.z - a.z) * t }, polygon)) continue;
-      const u = i / segments, v = (i + 1) / segments;
-      positions.push(a.x + (b.x - a.x) * u, 0, a.z + (b.z - a.z) * u,
-        a.x + (b.x - a.x) * v, 0, a.z + (b.z - a.z) * v);
-    }
-  };
-  for (let x = Math.ceil(-halfWidth); x <= halfWidth; x += 1) addClipped({ x, z: -halfDepth }, { x, z: halfDepth });
-  for (let z = Math.ceil(-halfDepth); z <= halfDepth; z += 1) addClipped({ x: -halfWidth, z }, { x: halfWidth, z });
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  return geometry;
-}
-
-function makeBoundary(outline: { x: number; z: number }[]): BufferGeometry {
-  const geometry = new BufferGeometry();
-  const positions: number[] = [];
-  outline.forEach((point, index) => {
-    const next = outline[(index + 1) % outline.length];
-    positions.push(point.x, 0, point.z, next.x, 0, next.z);
-  });
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  return geometry;
 }
 
 function PlacedObject({ object, asset, disabled, onModelLoaded, onModelFailed }: {
@@ -343,14 +229,7 @@ function PlacedObject({ object, asset, disabled, onModelLoaded, onModelFailed }:
       onPointerUp={finishObjectDrag}
       onPointerCancel={cancelObjectDrag}
     >
-        <AssetLoadBoundary
-          fallback={<BrokenPlaceholder dimensions={asset.baseDimensions} />}
-          onError={() => onModelFailed(object.id)}
-        >
-          <Suspense fallback={<LoadingPlaceholder dimensions={asset.baseDimensions} />}>
-            <LoadedAsset asset={asset} objectId={object.id} onLoaded={onModelLoaded} />
-          </Suspense>
-        </AssetLoadBoundary>
+        <GardenModel object={object} asset={asset} onModelLoaded={onModelLoaded} onModelFailed={onModelFailed} />
         {selected && <SelectionOutline asset={asset} />}
     </group>
   );
@@ -379,83 +258,4 @@ function PlacedObject({ object, asset, disabled, onModelLoaded, onModelFailed }:
       />}
     </>
   );
-}
-
-function LoadedAsset({ asset, objectId, onLoaded }: { asset: GardenAsset; objectId: string; onLoaded: (id: string) => void }) {
-  const { scene } = useGLTF(asset.modelUrl);
-  const clone = useMemo(() => cloneSkeleton(scene), [scene]);
-  useEffect(() => onLoaded(objectId), [objectId, onLoaded]);
-  return <primitive object={clone} />;
-}
-
-function SelectionOutline({ asset }: { asset: GardenAsset }) {
-  const dimensions = asset.baseDimensions;
-  const geometry = useMemo(() => {
-    const box = new BoxGeometry(dimensions.width, dimensions.height, dimensions.depth);
-    const edges = new EdgesGeometry(box);
-    box.dispose();
-    return edges;
-  }, [dimensions.depth, dimensions.height, dimensions.width]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  return (
-    <lineSegments geometry={geometry} position={[0, dimensions.height / 2, 0]}>
-      <lineBasicMaterial color="#bf7831" depthTest={false} />
-    </lineSegments>
-  );
-}
-
-function LoadingPlaceholder({ dimensions }: { dimensions: GardenAsset['baseDimensions'] }) {
-  return (
-    <mesh position={[0, dimensions.height / 2, 0]}>
-      <boxGeometry args={[dimensions.width * 0.7, dimensions.height * 0.7, dimensions.depth * 0.7]} />
-      <meshStandardMaterial color="#d6ba83" wireframe />
-    </mesh>
-  );
-}
-
-function BrokenPlaceholder({ dimensions }: { dimensions: GardenAsset['baseDimensions'] }) {
-  return (
-    <mesh position={[0, dimensions.height / 2, 0]}>
-      <boxGeometry args={[dimensions.width * 0.7, dimensions.height * 0.7, dimensions.depth * 0.7]} />
-      <meshStandardMaterial color="#bd554a" wireframe />
-    </mesh>
-  );
-}
-
-function BrokenObject({ object }: { object: GardenObject }) {
-  return (
-    <group position={[object.position.x, 0, object.position.z]}>
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[0.8, 1, 0.8]} />
-        <meshStandardMaterial color="#bd554a" wireframe />
-      </mesh>
-    </group>
-  );
-}
-
-interface BoundaryProps {
-  fallback: ReactNode;
-  onError: () => void;
-  children: ReactNode;
-}
-
-interface BoundaryState {
-  failed: boolean;
-}
-
-class AssetLoadBoundary extends Component<BoundaryProps, BoundaryState> {
-  state: BoundaryState = { failed: false };
-
-  static getDerivedStateFromError(): BoundaryState {
-    return { failed: true };
-  }
-
-  componentDidCatch() {
-    this.props.onError();
-  }
-
-  render() {
-    if (this.state.failed) return this.props.fallback;
-    return this.props.children;
-  }
 }

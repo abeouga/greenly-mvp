@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SysOverRay")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+31653faabbe673a9ac8a95690ca120cbcb7cb7ac")]
 [assembly: System.Reflection.AssemblyProductAttribute("SysOverRay")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SysOverRay")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
