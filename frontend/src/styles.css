@@ -187,6 +187,8 @@ input::placeholder { color: #adb4a8; }
 .swatch-brick_paver::before { top: 14px; left: 9px; width: 24px; height: 13px; border-radius: 2px; background: #b87b58; }
 .swatch-bench_wood::before { top: 13px; left: 9px; width: 24px; height: 9px; border-radius: 2px; background: #9b714d; }
 .swatch-bench_wood::after { position: absolute; top: 21px; left: 12px; width: 18px; height: 11px; border-right: 3px solid #715740; border-left: 3px solid #715740; content: ''; }
+.swatch-bench_wood { background: center / cover no-repeat url('/icons/bench-wood.jpg'); }
+.swatch-bench_wood::before, .swatch-bench_wood::after { content: none; }
 .asset-card-text { display: grid; min-width: 0; gap: 2px; }
 .asset-card-text strong { font-size: 11px; }
 .asset-card-text span, .asset-card-text small { color: #84907d; font-size: 9px; }
