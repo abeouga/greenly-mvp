@@ -1,0 +1,51 @@
+.photo-workspace { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; background: #e7ebe4; overflow: hidden; }
+.photo-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; min-height: 44px; padding: 4px 14px; background: #fafbf8; border-bottom: 1px solid #e4e9df; flex-shrink: 0; }
+.photo-controls .text-button { font-size: 12px; }
+.photo-controls .photo-remove { color: #707d6a; font-size: 11px; margin-left: 4px; }
+.photo-controls .button { font-size: 11px; padding: 6px 10px; min-height: 30px; }
+.photo-display-controls { display: flex; align-items: center; margin-left: auto; gap: 13px; padding: 0 6px; }
+.photo-display-controls label { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #65775c; }
+.photo-display-controls input { width: 12px; height: 12px; }
+.photo-guidance { display: flex; align-items: center; gap: 12px; min-height: 33px; padding: 5px 20px; background: #f4f6ef; color: #687b5b; font-size: 11px; border-bottom: 1px solid #e1e7dc; flex-shrink: 0; }
+.camera-state { color: #9b7b3f; white-space: nowrap; padding-right: 12px; border-right: 1px solid #dce3d5; }
+.camera-state.is-calibrated { color: #5e7f55; }
+.photo-guidance.is-drawing { background: #f7f1e4; color: #896c38; }
+.drawing-count { font-weight: 600; }
+.photo-workspace > .notice-error { padding: 7px 20px; background: #fdf5ee; flex-shrink: 0; }
+.photo-stage-shell { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+.photo-stage { display: block; width: 100%; height: 100%; touch-action: none; }
+.photo-models { width: 100%; height: 100%; }
+/* R3F uses image coordinates; SVG scales the renderer once, including its CSS box. */
+.photo-models canvas { display: block; width: 100% !important; height: 100% !important; }
+.photo-stage circle { cursor: grab; }
+.photo-stage circle[role='button'] { cursor: pointer; }
+.photo-stage circle[role='button']:focus-visible { outline: none; stroke: #d9ee87; stroke-width: 5; }
+.photo-empty { display: flex; flex: 1; min-height: 0; flex-direction: column; justify-content: center; align-items: center; gap: 12px; border: 1px dashed #c7d4bf; margin: 28px; border-radius: 8px; padding: 28px; background: #f5f8f1; color: #6c8063; }
+.photo-empty:hover:not(:disabled) { background: #f0f5eb; border-color: #8ba481; }
+.photo-empty strong { color: #425f39; font-size: 19px; font-weight: 500; margin-top: 5px; }
+.photo-empty > span { font-size: 12px; }
+.photo-empty .photo-empty-hint { font-size: 11px; color: #8e9b84; }
+.photo-empty .upload-format { font-size: 10px; margin-top: 12px; color: #9baa90; }
+.upload-symbol { display: grid; place-items: center; width: 62px; height: 62px; border: 1px solid #dce6d2; border-radius: 16px; background: #ecf2e6; color: #6c8958; }
+.is-dragging-file { outline: 3px solid #739663; outline-offset: -4px; }
+.photo-edges .edge-visible { stroke: #f0e3b5; stroke-width: 2; }
+.photo-edges .edge-hit { stroke: transparent; stroke-width: 6; fill: transparent; cursor: pointer; }
+.photo-edge:hover .edge-visible, .photo-edge.selected .edge-visible, .photo-edge:focus-within .edge-visible { stroke: #fff; stroke-width: 4; }
+.edge-label { opacity: 0; transition: opacity 100ms; }
+.photo-edge:hover .edge-label, .photo-edge.selected .edge-label, .photo-edge:focus-within .edge-label { opacity: 1; }
+.edge-label rect { fill: #fff; stroke: #d0dcd2; stroke-width: 1; }
+.edge-label text { font: 13px 'Segoe UI', sans-serif; fill: #244d3d; }
+.edge-popover { position: absolute; z-index: 20; width: 280px; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: auto; padding: 18px; border: 1px solid #d7e0d3; border-radius: 10px; background: #fff; box-shadow: 0 10px 36px #24351f24, 0 2px 6px #24351f0b; }
+.edge-popover header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 18px; }
+.edge-popover header .icon-button { margin: -5px -6px 0 0; }
+.popover-caption { display: flex; align-items: center; gap: 6px; color: #839079; font-size: 10px; }
+.edge-popover h3 { margin-top: 7px; font-size: 16px; }
+.edge-input-label { display: grid; gap: 7px; font-size: 11px; }
+.edge-input-label input { min-height: 44px; font-size: 23px; font-weight: 500; padding: 9px 12px; }
+.edge-popover p { margin: 12px 0; color: #627357; font-size: 12px; line-height: 1.75; }
+.edge-popover .edge-warning { padding: 9px 10px; background: #f9f5eb; color: #806b3a; border-radius: 5px; font-size: 11px; }
+.edge-popover p.notice-error { color: var(--danger); }
+.edge-neighbor { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 0; border-top: 1px solid #eaf0e5; font-size: 11px; color: #8b977e; }
+.edge-neighbor span { color: #47613e; font-variant-numeric: tabular-nums; }
+.edge-popover footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e8eee2; }
+.edge-popover .button { min-height: 34px; padding: 7px 13px; font-size: 11px; }

@@ -35,11 +35,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\hanam\\Desktop\\シスオーバーレイ2\\verification\\LifecycleProbe\\LifecycleProbe.csproj",
+      "projectUniqueName": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\verification\\LifecycleProbe\\LifecycleProbe.csproj",
       "projectName": "LifecycleProbe",
-      "projectPath": "C:\\Users\\hanam\\Desktop\\シスオーバーレイ2\\verification\\LifecycleProbe\\LifecycleProbe.csproj",
+      "projectPath": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\verification\\LifecycleProbe\\LifecycleProbe.csproj",
       "packagesPath": "C:\\Users\\hanam\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\hanam\\Desktop\\シスオーバーレイ2\\verification\\LifecycleProbe\\obj\\",
+      "outputPath": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\verification\\LifecycleProbe\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\hanam\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -55,8 +55,8 @@
           "framework": "net10.0-windows7.0",
           "targetAlias": "net10.0-windows",
           "projectReferences": {
-            "C:\\Users\\hanam\\Desktop\\シスオーバーレイ2\\SysOverRay\\SysOverRay.csproj": {
-              "projectPath": "C:\\Users\\hanam\\Desktop\\シスオーバーレイ2\\SysOverRay\\SysOverRay.csproj"
+            "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj": {
+              "projectPath": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj"
             }
           }
         }

@@ -3,6 +3,10 @@ import { homography, unitCorners, validCorners, validSurface, withPhotoBoundary 
 import { useEditorStore } from '../stores/editorStore';
 import type { GardenAsset, GardenDocument, ImagePoint } from '../types/garden';
 import { PhotoCanvas } from '../three/PhotoCanvas';
+import { PhotoCalibrationEditor } from './PhotoCalibrationEditor';
+import { calibratedBoundaryError, projectionCorners } from '../domain/calibratedProjection';
+import { PhotoEdges, EdgeLengthPopover, type EdgeSelection } from './PhotoEdges';
+import { UiIcon } from './UiIcon';
 
 interface PhotoOverlayProps {
   document: GardenDocument;
@@ -17,6 +21,7 @@ interface PhotoOverlayProps {
 export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed }: PhotoOverlayProps) {
   const svg = useRef<SVGSVGElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const cameraButton = useRef<HTMLButtonElement>(null);
   const dragDepth = useRef(0);
   const [groundVisible, setGroundVisible] = useState(true);
   const [gridVisible, setGridVisible] = useState(true);
@@ -24,14 +29,17 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
   const [dragging, setDragging] = useState<number | null>(null);
   const draft = useEditorStore((state) => state.photoBoundaryDraft);
   const drawingBoundary = draft !== null;
+  const calibrating = useEditorStore((state) => state.isCalibrating);
   const [pointer, setPointer] = useState<ImagePoint | null>(null);
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [error, setError] = useState('');
+  const [selectedEdge, setSelectedEdge] = useState<EdgeSelection | null>(null);
   const photo = document.photo;
+  const calibrationError = photo ? calibratedBoundaryError(photo, document.width, document.depth) : null;
   const valid = photo ? validCorners(photo.corners) : false;
   const boundaryValid = photo ? validSurface(photo) : false;
-  const surfaceVisible = boundaryValid && !drawingBoundary;
-  const project = valid ? homography(unitCorners, photo!.corners) : null;
+  const surfaceVisible = boundaryValid && !drawingBoundary && !calibrationError;
+  const project = valid ? homography(unitCorners, projectionCorners(photo!, document.width, document.depth)) : null;
 
   function imagePoint(clientX: number, clientY: number): ImagePoint | null {
     const matrix = svg.current?.getScreenCTM();
@@ -42,6 +50,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
 
   function updatePoint(index: number, point: ImagePoint) {
     if (!photo || disabled) return;
+    setSelectedEdge(null);
     const next = { x: Math.max(0, Math.min(1, point.x)), y: Math.max(0, Math.min(1, point.y)) };
     const boundary = [...(draft ?? photo.boundary)]; boundary[index] = next;
     if (drawingBoundary) useEditorStore.getState().setPhotoBoundaryDraft(boundary);
@@ -67,6 +76,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
 
   async function readPhoto(file: File | undefined) {
     if (!file || disabled) return;
+    setSelectedEdge(null);
     setError('');
     if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5_000_000) {
       setError('JPEGまたはPNGを5MB以内で選択してください。'); return;
@@ -148,23 +158,33 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
   }
   return <div className={`photo-workspace${isFileDragging ? ' is-dragging-file' : ''}`}
     onDragEnter={handleFileDragEnter} onDragOver={handleFileDragOver} onDragLeave={handleFileDragLeave} onDrop={handleFileDrop}>
+    {calibrating && photo && <PhotoCalibrationEditor document={document} photo={photo} returnFocus={cameraButton} onClose={() => useEditorStore.getState().setCalibrating(false)} />}
     <input ref={fileInput} type="file" accept="image/jpeg,image/png" disabled={disabled} aria-label="庭の写真を選択"
       onChange={(event) => { void readPhoto(event.target.files?.[0]); event.target.value = ''; }} hidden />
-    <div className="photo-controls">
-      {photo && <button type="button" className="button button-secondary" disabled={disabled} onClick={() => { useEditorStore.getState().setPhoto(null); setPointer(null); setError(''); }}>写真を外す</button>}
-      {photo && !drawingBoundary && <button type="button" className="button button-secondary" disabled={disabled} onClick={() => { useEditorStore.getState().setPhotoBoundaryDraft([]); setPointer(null); setError(''); }}>{boundaryValid ? '庭の領域を書き直す' : '庭の領域を描く'}</button>}
+    {photo && <div className="photo-controls">
+      {!drawingBoundary && <button ref={cameraButton} type="button" className="text-button" disabled={disabled} aria-haspopup="dialog" onClick={() => { setSelectedEdge(null); useEditorStore.getState().setCalibrating(true); }}><UiIcon name="camera" size={16} />写真のカメラを設定</button>}
+      {!drawingBoundary && <button type="button" className="text-button" disabled={disabled} onClick={() => { useEditorStore.getState().setPhotoBoundaryDraft([]); setSelectedEdge(null); setPointer(null); setError(''); }}><UiIcon name="polygon" size={16} />{boundaryValid ? '庭の領域を書き直す' : '庭の領域を描く'}</button>}
+      <button type="button" className="text-button photo-remove" disabled={disabled} onClick={() => { useEditorStore.getState().setPhoto(null); setSelectedEdge(null); setPointer(null); setError(''); }}>写真を外す</button>
       {drawingBoundary && draft.length > 0 && <button type="button" className="button button-secondary" disabled={disabled} onClick={() => { useEditorStore.getState().setPhotoBoundaryDraft(draft.slice(0, -1)); setError(''); }}>最後の点を戻す</button>}
       {drawingBoundary && <button type="button" className="button button-secondary" disabled={disabled} onClick={() => { useEditorStore.getState().setPhotoBoundaryDraft(null); setPointer(null); setError(''); }}>輪郭の描画を取消</button>}
-      <label><input type="checkbox" checked={groundVisible} onChange={(event) => setGroundVisible(event.target.checked)} /> 地面</label>
+      <div className="photo-display-controls"><label><input type="checkbox" checked={groundVisible} onChange={(event) => setGroundVisible(event.target.checked)} /> 地面</label>
       <label><input type="checkbox" checked={gridVisible} onChange={(event) => setGridVisible(event.target.checked)} /> グリッド</label>
-      <label><input type="checkbox" checked={objectsVisible} onChange={(event) => setObjectsVisible(event.target.checked)} /> 配置</label>
-    </div>
+      <label><input type="checkbox" checked={objectsVisible} onChange={(event) => setObjectsVisible(event.target.checked)} /> 配置</label></div>
+    </div>}
     {error && <p role="alert" className="notice-error">{error}</p>}
+    {calibrationError && <p role="alert" className="notice-error">{calibrationError}</p>}
     {!photo ? <button type="button" className="photo-empty" disabled={disabled} onClick={() => fileInput.current?.click()}>
+      <span className="upload-symbol"><UiIcon name="photo" size={32} /></span>
+      <strong>庭の写真から設計する</strong>
       <span>庭の写真を選択してください。</span>
       <span className="photo-empty-hint">クリックして選択、またはここにドラッグ＆ドロップ</span>
+      <span className="upload-format">JPEG / PNG · 5MBまで</span>
     </button> : <>
-      <p className="photo-hint" aria-live="polite">{drawingBoundary ? `庭の輪郭を描画中（${draft.length}/64点）。頂点を順にクリックし、3点以上で始点1につなぐと確定します。4点目でも描画は続きます。` : !boundaryValid ? '「庭の領域を描く」で庭の輪郭を指定してください。交差・面積不足・重複する頂点は確定できません。' : 'カタログで木などを選び、庭の領域内をクリックして配置します。木をクリックすると選択できます。輪郭の点はドラッグで調整できます。'}</p>
+      <div className={`photo-guidance photo-hint${drawingBoundary ? ' is-drawing' : ''}`} aria-live="polite">
+        {drawingBoundary ? <><span className="drawing-count">{draft.length}/64点</span><span>頂点を順にクリック。3点以上で始点につなぐと確定します。</span></>
+          : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを編集 · 頂点をドラッグして輪郭を調整'}</span></>}
+      </div>
+      <div className="photo-stage-shell">
       <svg ref={svg} className="photo-stage" viewBox={`0 0 ${photo.imageWidth} ${photo.imageHeight}`} onClick={onImageClick}
         onPointerMove={(event) => { if (disabled) return; const p = imagePoint(event.clientX, event.clientY); if (!p) return; if (dragging !== null) updatePoint(dragging, p); else setPointer(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1 ? p : null); }}
         onPointerLeave={() => setPointer(null)}
@@ -178,6 +198,8 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
             objectsVisible={objectsVisible} retryRequest={retryRequest} onModelLoaded={onModelLoaded} onModelFailed={onModelFailed} />
         </foreignObject>}
         {boundaryPoints.length > 1 && <polyline points={boundary} fill="none" stroke="#ffbd68" strokeWidth={Math.max(2, photo.imageWidth / 500)} pointerEvents="none" />}
+        {boundaryValid && !drawingBoundary && <PhotoEdges document={document} selected={selectedEdge?.index ?? null} disabled={disabled}
+          onSelect={(selection) => { useEditorStore.getState().selectAsset(null); setSelectedEdge(selection); }} />}
         {previewStart && previewEnd && dragging === null && !disabled && <line data-testid="photo-preview-edge" x1={previewStart.x} y1={previewStart.y} x2={previewEnd.x} y2={previewEnd.y} stroke={closing ? '#d9ee87' : '#ffbd68'} strokeWidth={Math.max(2, photo.imageWidth / 500)} strokeDasharray="7 5" pointerEvents="none" />}
         {boundaryPoints.map((point, index) => { const p = pixels(point); const start = drawingBoundary && index === 0; return <g key={`b${index}`}>
           {start && draft.length >= 3 && <circle cx={p.x} cy={p.y} r={Math.max(14, photo.imageWidth / 80)} fill="transparent" stroke={closing ? '#d9ee87' : '#ffbd68'} strokeWidth="2"
@@ -188,8 +210,13 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
             onClick={(event) => { event.stopPropagation(); if (start) finishBoundary(); }}
             onPointerDown={(event) => { event.stopPropagation(); if (disabled || start) return; setPointer(null); setDragging(index); event.currentTarget.setPointerCapture(event.pointerId); }} />
           {drawingBoundary && <text data-testid="photo-vertex-number" x={p.x} y={p.y + 4} textAnchor="middle" fontSize={Math.max(11, photo.imageWidth / 95)} fill="#593818" pointerEvents="none">{index + 1}</text>}
+          {!drawingBoundary && selectedEdge && (index === selectedEdge.index || index === (selectedEdge.index + 1) % boundaryPoints.length) &&
+            <text x={p.x + 14} y={p.y - 12} fontSize={Math.max(13, photo.imageWidth / 80)} fill="#244d3d" stroke="#fff" strokeWidth="3" paintOrder="stroke" pointerEvents="none">{index === selectedEdge.index ? '固定' : '移動'}</text>}
         </g>; })}
       </svg>
+      {selectedEdge && !drawingBoundary && boundaryValid && <EdgeLengthPopover key={`${selectedEdge.index}:${photo.boundary.map((p) => `${p.x},${p.y}`).join(';')}`}
+        document={document} selection={selectedEdge} disabled={disabled} onClose={() => setSelectedEdge(null)} />}
+      </div>
     </>}
   </div>;
 }

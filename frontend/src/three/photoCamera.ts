@@ -1,12 +1,29 @@
-import { Matrix4, OrthographicCamera } from 'three';
-import { homographyMatrix, unitCorners } from '../domain/photoProjection';
-import type { GardenPhoto } from '../types/garden';
+import { Matrix4, OrthographicCamera, PerspectiveCamera } from 'three';
+import { homographyMatrix, unitCorners } from '../domain/photoProjection.js';
+import type { GardenPhoto } from '../types/garden.js';
 
-// Preserve ground correspondence and keep world-up vertical in the photo.
-// Photo contours do not determine a physical camera pose or a vertical vanishing point.
+// Use a physical perspective camera when calibrated; legacy photos retain their approximation.
 export function createPhotoCamera(photo: GardenPhoto, width: number, depth: number) {
+  const calibration = photo.calibration;
+  if (calibration) {
+    const fov = 2 * Math.atan(photo.imageHeight / (2 * calibration.focalLengthPx)) * 180 / Math.PI;
+    const camera = Object.assign(new PerspectiveCamera(fov, photo.imageWidth / photo.imageHeight, 0.01, 2000), { manual: true });
+    const r = calibration.rotation, t = calibration.translation;
+    // CV has Y down / Z forward; Three.js has Y up / Z backward.
+    const view = new Matrix4().set(
+      r[0], r[1], r[2], t[0],
+      -r[3], -r[4], -r[5], -t[1],
+      -r[6], -r[7], -r[8], -t[2],
+      0, 0, 0, 1,
+    );
+    view.invert().decompose(camera.position, camera.quaternion, camera.scale);
+    camera.updateMatrixWorld(true);
+    return camera;
+  }
   const transform = homographyMatrix(unitCorners, photo.corners);
   if (!transform) return null;
+  width = photo.projectionSize?.width ?? width;
+  depth = photo.projectionSize?.depth ?? depth;
   const range = Math.max(12, width, depth) * 32;
   const camera = Object.assign(new OrthographicCamera(-1, 1, 1, -1, 0.1, range * 2), { manual: true });
   camera.position.set(0, range / 2, range / 2);

@@ -1,4 +1,6 @@
 import type { GardenAsset } from '../types/garden';
+import { AssetPreview } from './AssetPreview';
+import { UiIcon } from './UiIcon';
 
 interface CatalogPanelProps {
   assets: GardenAsset[];
@@ -18,23 +20,22 @@ const categories: Record<string, string> = {
 
 export function CatalogPanel({ assets, selectedAssetId, disabled, collapsed, onSelect, onToggle }: CatalogPanelProps) {
   return (
-    <aside id="catalog-panel" className={`editor-panel side-panel catalog-panel${collapsed ? ' is-collapsed' : ''}`}>
-      <div className="side-panel-controls">
+    <aside id="catalog-panel" className={`catalog-panel${collapsed ? ' is-collapsed' : ''}`} aria-label="素材カタログ">
+      <div className="catalog-heading">
+        <h2><UiIcon name="plus" size={16} />素材を追加</h2>
+        <span>{selectedAssetId ? '同じ素材を続けて配置できます' : '素材を選び、庭をクリックして配置'}</span>
         <button
-          className="side-panel-toggle"
+          className="text-button"
           type="button"
           aria-label={collapsed ? 'オブジェクトパネルを表示' : 'オブジェクトパネルを隠す'}
           aria-expanded={!collapsed}
           aria-controls="catalog-panel-content"
           onClick={onToggle}
         >
-          <span aria-hidden="true">{collapsed ? '›' : '‹'}</span>
+          {collapsed ? '開く' : 'しまう'}<span className={collapsed ? 'chevron-up' : ''}><UiIcon name="chevron" size={16} /></span>
         </button>
       </div>
-      <div id="catalog-panel-content" className="side-panel-content" aria-hidden={collapsed}>
-        <div className="panel-heading">
-          <h2>カタログ</h2>
-        </div>
+      <div id="catalog-panel-content" hidden={collapsed}>
         <div className="asset-list">
           {assets.map((asset) => (
             <button
@@ -46,16 +47,15 @@ export function CatalogPanel({ assets, selectedAssetId, disabled, collapsed, onS
               disabled={disabled}
               onClick={() => onSelect(asset.id)}
             >
-              <span className={`asset-swatch swatch-${asset.id}`} aria-hidden="true" />
+              <AssetPreview assetId={asset.id} />
               <span className="asset-card-text">
                 <strong>{asset.name}</strong>
-                <span>{categories[asset.category] ?? asset.category}</span>
+                <span>{categories[asset.category] ?? asset.category}{selectedAssetId === asset.id ? ' · 配置中' : ''}</span>
                 <small>{asset.baseDimensions.width} × {asset.baseDimensions.height} × {asset.baseDimensions.depth} m</small>
               </span>
             </button>
           ))}
         </div>
-        <p className="panel-hint">開発用の簡易GLBモデルです。</p>
       </div>
     </aside>
   );

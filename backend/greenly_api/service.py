@@ -84,8 +84,6 @@ def update_garden(session: Session, owner: str, id: str, document: GardenDocumen
         garden = owned_garden(session, owner, id, lock=True)
         if garden.revision != document.revision:
             raise ApiError(409, "REVISION_CONFLICT", "庭が別の版で更新されています。最新データを取得してください。")
-        if garden.width != document.width or garden.depth != document.depth:
-            bad_request("GARDEN_DIMENSIONS_IMMUTABLE", "作成済みの庭の寸法は変更できません。")
         if garden.revision == 9223372036854775807:
             raise ApiError(409, "REVISION_EXHAUSTED", "庭の版番号を更新できません。")
         asset_ids = {obj.assetId for obj in document.objects}
@@ -93,6 +91,8 @@ def update_garden(session: Session, owner: str, id: str, document: GardenDocumen
         if known != asset_ids:
             bad_request("UNKNOWN_ASSET", "カタログに存在しないアセットが含まれています。")
         garden.name = document.name.strip()
+        garden.width = document.width
+        garden.depth = document.depth
         garden.revision += 1
         garden.updated_at = datetime.now(UTC).replace(tzinfo=None)
         garden.photo_json = document.photo.model_dump_json() if document.photo is not None else None

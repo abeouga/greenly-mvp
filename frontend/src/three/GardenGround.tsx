@@ -3,6 +3,7 @@ import { BufferGeometry, DoubleSide, Float32BufferAttribute, Shape, ShapeGeometr
 import { useEditorStore } from '../stores/editorStore';
 import type { GardenAsset, GardenDocument } from '../types/garden';
 import { homography, pointInPolygon, unitCorners, validSurface } from '../domain/photoProjection';
+import { calibratedBoundaryError, groundPoint } from '../domain/calibratedProjection';
 
 export function GardenGround({ document, selectedAsset, disabled, invisible = false }: { document: GardenDocument; selectedAsset: GardenAsset | null; disabled: boolean; invisible?: boolean }) {
   const press = useRef<{ x: number; y: number; pointerId: number } | null>(null);
@@ -60,10 +61,14 @@ export function GardenGround({ document, selectedAsset, disabled, invisible = fa
 function groundOutline(document: GardenDocument): { x: number; z: number }[] {
   const photo = document.photo;
   if (photo && validSurface(photo)) {
+    if (photo.calibration && !calibratedBoundaryError(photo, document.width, document.depth)) {
+      const outline = photo.boundary.map((p) => groundPoint(photo, p));
+      if (outline.every((p) => p !== null)) return outline;
+    }
     const inverse = homography(photo.corners, unitCorners);
     if (inverse) return photo.boundary.map((point) => {
       const p = inverse(point);
-      return { x: (p.x - 0.5) * document.width, z: (0.5 - p.y) * document.depth };
+      return { x: (p.x - 0.5) * (photo.projectionSize?.width ?? document.width), z: (0.5 - p.y) * (photo.projectionSize?.depth ?? document.depth) };
     });
   }
   return [

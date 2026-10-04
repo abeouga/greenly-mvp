@@ -102,7 +102,7 @@ def verify_api(base: str, settings) -> list[str]:
             assert get(id) == garden
         checks.append("PNG and JPEG photo byte-preserving roundtrip with objects and accumulated rotation")
         invalids = []
-        for change, code in [(lambda d: d.update(width=11), "GARDEN_DIMENSIONS_IMMUTABLE"),
+        for change, code in [(lambda d: d.update(width=51), "INVALID_REQUEST"),
                              (lambda d: d.update(extra=True), "INVALID_REQUEST"),
                              (lambda d: d["objects"][0].update(id="invalid"), "INVALID_OBJECT_ID"),
                              (lambda d: d["objects"][0].update(assetId="unknown"), "UNKNOWN_ASSET"),

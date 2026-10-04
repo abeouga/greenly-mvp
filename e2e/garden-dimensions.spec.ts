@@ -1,0 +1,76 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { expect, test } from '@playwright/test';
+import type { GardenDocument } from '../frontend/src/types/garden.js';
+
+test('Q. 名前だけで作成・土台寸法を編集・縮小検証・MySQL保存復元', async ({ page, request }) => {
+  const api = 'http://127.0.0.1:18080/api';
+  const directory = resolve('artifacts/e2e');
+  await mkdir(directory, { recursive: true });
+  await page.goto('/');
+  await expect(page.locator('.create-form input')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '庭を作成' })).toBeDisabled();
+  await page.getByLabel('庭の名前').fill(`E2E dimensions ${Date.now()}`);
+  const creation = page.waitForRequest((r) => r.method() === 'POST' && r.url().endsWith('/api/gardens'));
+  await page.getByRole('button', { name: '庭を作成' }).click();
+  expect(Object.keys((await creation).postDataJSON())).toEqual(['name']);
+  await page.waitForURL(/\/gardens\//);
+  const id = new URL(page.url()).pathname.split('/').at(-1)!;
+  try {
+    await page.getByRole('button', { name: '土台設定', exact: true }).click();
+    await expect(page.getByLabel('幅 (m)', { exact: true })).toHaveValue('10');
+    await expect(page.getByLabel('奥行き (m)', { exact: true })).toHaveValue('8');
+    await page.getByLabel('幅 (m)', { exact: true }).fill('14');
+    await page.getByLabel('奥行き (m)', { exact: true }).fill('12');
+    await page.getByRole('button', { name: '土台に適用' }).click();
+    await expect(page.getByRole('img', { name: '現在の土台：幅14m、奥行き12m' })).toBeVisible();
+    await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+    const initial = await (await request.get(`${api}/gardens/${id}`)).json() as GardenDocument;
+    expect([initial.width, initial.depth]).toEqual([10, 8]);
+    await page.getByRole('button', { name: '土台設定を閉じる' }).click();
+    await page.getByRole('button', { name: '上から見る' }).click();
+    await page.getByTestId('asset-tree_oak').click();
+    const box = await page.locator('[data-testid="garden-canvas"] canvas').boundingBox();
+    if (!box) throw new Error('3D庭が表示されていません。');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.getByTestId('object-row-0')).toBeVisible();
+    await page.getByTestId('position-x').fill('6');
+    await page.getByRole('button', { name: '土台設定', exact: true }).click();
+    await page.getByLabel('幅 (m)', { exact: true }).fill('10');
+    await page.getByRole('button', { name: '土台に適用' }).click();
+    await expect(page.getByRole('alert')).toContainText('配置済みの物体が土台の外');
+    await expect(page.getByRole('img', { name: '現在の土台：幅14m、奥行き12m' })).toBeVisible();
+    await page.getByRole('button', { name: '入力を戻す' }).click();
+    await page.getByRole('button', { name: '土台設定を閉じる' }).click();
+    await page.getByTestId('save-garden').click();
+    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+    const saved = await (await request.get(`${api}/gardens/${id}`)).json() as GardenDocument;
+    expect([saved.width, saved.depth]).toEqual([14, 12]);
+    expect(saved.objects[0].position.x).toBe(6);
+    const rejected = await request.put(`${api}/gardens/${id}`, { data: { ...saved, width: 10 } });
+    expect(rejected.status()).toBe(400);
+    expect((await rejected.json()).code).toBe('OBJECT_POSITION_OUT_OF_BOUNDS');
+    const stale = await request.put(`${api}/gardens/${id}`, { data: { ...saved, revision: 0, width: 16 } });
+    expect(stale.status()).toBe(409);
+    await page.reload();
+    await page.getByRole('button', { name: '土台設定', exact: true }).click();
+    await expect(page.getByLabel('幅 (m)', { exact: true })).toHaveValue('14');
+    await expect(page.getByLabel('奥行き (m)', { exact: true })).toHaveValue('12');
+    await expect(page.getByTestId('model-loaded')).toHaveText('読み込み済み: 1 / 1');
+    expect(await (await request.get(`${api}/gardens/${id}`)).json()).toEqual(saved);
+    await writeFile(resolve(directory, 'garden-dimensions.json'), JSON.stringify(saved, null, 2));
+    await page.screenshot({ path: resolve(directory, 'garden-dimensions-reloaded.png'), fullPage: true });
+    // A valid shrink changes only the bounds, keeping the existing object.
+    await page.getByLabel('幅 (m)', { exact: true }).fill('12.5');
+    await page.getByRole('button', { name: '土台に適用' }).click();
+    await page.getByRole('button', { name: '土台設定を閉じる' }).click();
+    await page.getByTestId('save-garden').click();
+    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+    const shrunk = await (await request.get(`${api}/gardens/${id}`)).json() as GardenDocument;
+    expect(shrunk.width).toBe(12.5); expect(shrunk.objects).toEqual(saved.objects);
+    await page.getByRole('button', { name: '← 庭一覧', exact: true }).click();
+    await expect(page.locator('.garden-card').filter({ hasText: saved.name })).toContainText('12.5 × 12 m');
+  } finally {
+    expect((await request.delete(`${api}/gardens/${id}`)).status()).toBe(204);
+  }
+});

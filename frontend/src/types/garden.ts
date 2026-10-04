@@ -25,6 +25,18 @@ export interface GardenDocument {
 
 export interface ImagePoint { x: number; y: number }
 
+export interface PhotoCalibration {
+  version: 1;
+  points: ImagePoint[];
+  referenceWidth: number;
+  referenceDepth: number;
+  focalLengthPx: number;
+  focalSource: 'estimated' | 'manual';
+  rotation: number[];
+  translation: number[];
+  reprojectionErrorPx: number;
+}
+
 export interface GardenPhoto {
   dataUrl: string;
   imageWidth: number;
@@ -33,6 +45,8 @@ export interface GardenPhoto {
   // Derived from the outline bounds when drawing; preserved for older saved photos.
   corners: ImagePoint[];
   boundary: ImagePoint[];
+  calibration?: PhotoCalibration | null;
+  projectionSize?: { width: number; depth: number } | null;
 }
 
 export interface GardenSummary {
@@ -62,6 +76,6 @@ export type TransformTool = 'move' | 'rotate' | 'scale';
 
 export interface GardenCreateRequest {
   name: string;
-  width: number;
-  depth: number;
+  width?: number;
+  depth?: number;
 }

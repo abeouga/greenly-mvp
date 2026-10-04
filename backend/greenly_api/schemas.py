@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -21,7 +22,8 @@ class NamedRequest(ApiModel):
 
 
 class CreateGardenRequest(NamedRequest):
-    pass
+    width: float = Field(default=10, ge=1, le=50)
+    depth: float = Field(default=8, ge=1, le=50)
 
 
 class Vector(ApiModel):
@@ -50,12 +52,41 @@ class ImagePoint(ApiModel):
     y: float
 
 
+class CalibrationRequest(ApiModel):
+    imageWidth: int = Field(ge=1, le=6000)
+    imageHeight: int = Field(ge=1, le=6000)
+    points: list[ImagePoint] = Field(min_length=4, max_length=4)
+    referenceWidth: float = Field(ge=0.1, le=50)
+    referenceDepth: float = Field(ge=0.1, le=50)
+    focalLengthPx: float | None = Field(default=None, gt=0, le=100000)
+
+
+class PhotoCalibration(ApiModel):
+    version: Literal[1] = 1
+    points: list[ImagePoint] = Field(min_length=4, max_length=4)
+    referenceWidth: float = Field(ge=0.1, le=50)
+    referenceDepth: float = Field(ge=0.1, le=50)
+    focalLengthPx: float = Field(gt=0, le=100000)
+    focalSource: Literal['estimated', 'manual']
+    rotation: list[float] = Field(min_length=9, max_length=9)
+    translation: list[float] = Field(min_length=3, max_length=3)
+    reprojectionErrorPx: float = Field(ge=0)
+
+
+class PhotoProjectionSize(ApiModel):
+    width: float = Field(ge=1, le=50)
+    depth: float = Field(ge=1, le=50)
+
+
 class GardenPhoto(ApiModel):
     dataUrl: str
     imageWidth: int
     imageHeight: int
     corners: list[ImagePoint]
     boundary: list[ImagePoint]
+    # Absent optional extensions must not change the JSON shape of legacy photos.
+    calibration: PhotoCalibration | None = Field(default=None, exclude_if=lambda value: value is None)
+    projectionSize: PhotoProjectionSize | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class GardenDocumentRequest(NamedRequest):
