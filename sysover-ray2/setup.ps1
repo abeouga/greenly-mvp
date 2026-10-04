@@ -42,10 +42,17 @@ if ($systemRuntimeReady) {
       $powerShellExe = Join-Path $PSHOME 'powershell.exe'
       if (-not (Test-Path -LiteralPath $powerShellExe)) { $powerShellExe = 'powershell.exe' }
       & $powerShellExe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $installer `
+        -Runtime dotnet -Channel '10.0' -Architecture x64 -InstallDir $runtimeRoot -NoPath
+      if ($LASTEXITCODE -ne 0) { throw ".NET本体の導入に失敗しました (exit $LASTEXITCODE)。" }
+      & $powerShellExe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $installer `
         -Runtime windowsdesktop -Channel '10.0' -Architecture x64 -InstallDir $runtimeRoot -NoPath
       if ($LASTEXITCODE -ne 0) { throw ".NET Desktop Runtimeの導入に失敗しました (exit $LASTEXITCODE)。" }
     } finally {
-      if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+      $resolvedTemporary = [IO.Path]::GetFullPath($tempRoot)
+      if ($resolvedTemporary.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\greenly-dotnet-',
+          [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $resolvedTemporary)) {
+        Remove-Item -LiteralPath $resolvedTemporary -Recurse -Force
+      }
     }
     if (-not (Test-DesktopRuntime -DotnetPath $localDotnet)) {
       throw '.NET 10 Desktop Runtimeの導入後確認に失敗しました。'

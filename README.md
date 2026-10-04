@@ -8,47 +8,36 @@ Greenlyは、PCブラウザーで庭を手動設計するローカル開発用MV
 
 - Windows 10/11 x64。Windows以外からは`start.bat`とWPFオーバーレイを利用できません。
 - Node.js 22.12以降、Python 3.12、uv（`setup.bat`が不足分をユーザー領域へ用意します。Java/Mavenは不要）
-- MySQL Server 8.0。開発用とE2E専用の2データベースを作成できるローカルアカウント
+- MySQL Server 8.0/8.4（未導入の場合は`setup.bat`がGreenly専用MySQLを用意します）
 - Chromium（E2Eを実行するとき）
-- MySQLのmysqldumpコマンド（既存DBの初回引き継ぎ・スキーマ更新時にバックアップを作成するため）
+- 初回セットアップ時のインターネット接続とディスク空き容量。既存MySQLを使う場合はその管理者認証情報
 
 JavaScript依存バージョンは`package-lock.json`で固定しています。R3F 9はReact 19と組み合わせ、Drei 10はFiber 9をpeer dependencyとして指定しています。詳細は[React Three Fiberの導入資料](https://r3f.docs.pmnd.rs/getting-started/installation)と`docs/architecture.md`を参照してください。
 
 ## Windowsでの初回設定
 
-Windows 10/11 x64で、リポジトリのルートにある`setup.bat`を実行します。PowerShellからは`./setup.ps1`を実行できます。Node.js 22.12以降が見つからない場合は公式LTS配布物をSHA-256照合後に`%LOCALAPPDATA%\Greenly\tools`へ展開します。uvも同じユーザー領域に導入し、Python 3.12はuvの管理領域に取得します。`package-lock.json`と`backend\uv.lock`に基づく依存関係、GLBアセット、SysOverRay用.NET 10 Desktop Runtimeを準備し、デスクトップにSysOverRayのショートカットを作成します。管理者権限のあるシステム全体インストールは行いません。
+Windows 10/11 x64で、リポジトリのルートにある`setup.bat`を実行します。PowerShellからは`./setup.ps1`を実行できます。Node.js、uv、Python 3.12、ロック済み依存関係、GLB、MySQL、SysOverRay用.NET 10 Desktop Runtimeをまとめて準備します。未導入のツールはユーザー領域へ取得し、MySQL配布物は固定SHA-256とOracle署名を確認します。MySQLのVisual C++ランタイムが未導入の場合だけ、Windowsの管理者確認が表示されることがあります。
 
 セットアップ後、`start.bat`またはPowerShellの`./start.ps1`で起動します。起動時も環境を再確認し、ロックファイルが変わった場合だけ依存関係を復元します。`start.bat -NoBrowser`、`start.ps1 -NoBrowser`も使えます。
 
-この処理はMySQL Serverをインストールせず、DBや利用者も作成しません。既存データを持つMySQL環境を誤って変更しないためです。MySQL Server 8.0以降を別途起動し、下記の開発用DBとアカウントを作成してください。接続先は`127.0.0.1:3306`が初期値です。
+既存のMySQLが`127.0.0.1:3306`で応答する場合は、そのサーバーを利用します。初回に「MySQL管理者名」でEnterを押すとrootが選択されます。続けて、その管理者のパスワードを非表示入力します。管理者パスワードは保存しません。GreenlyのDB・専用ユーザー・権限・テーブルを自動準備し、専用ユーザーの自動生成パスワードを`.env`と`.env.e2e`へ保存します。通常はSQLの手動実行や設定ファイルの手動編集は不要です。
 
-MySQLへ管理者で接続し、開発用とE2E用に独立したDB・ユーザーを作ります。下記のパスワードは例なので、ローカルだけで使用する値に置き換えてください。アプリ接続情報はソースやGitへ保存しません。
+MySQLが未稼働で接続先も未指定の場合は、Greenly専用MySQLをユーザー領域へ用意します。管理者名・パスワードの入力は不要です。既存MySQLから独立した保存先と空きポートを使い、既存サービスを変更しません。専用MySQLを明示的に選ぶ場合は次を実行します。既存の明示接続設定を別DBへ自動変更する処理はありません。
 
 ```powershell
-$mysql = Join-Path $env:ProgramFiles 'MySQL\MySQL Server 8.0\bin\mysql.exe'
-& $mysql -u root -p
+.\setup.bat -DatabaseMode managed
 ```
 
-MySQLプロンプトで実行します。
-
-```sql
-CREATE DATABASE IF NOT EXISTS greenly CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE DATABASE IF NOT EXISTS greenly_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER IF NOT EXISTS 'greenly_dev'@'localhost' IDENTIFIED BY 'replace-with-local-password';
-CREATE USER IF NOT EXISTS 'greenly_e2e'@'localhost' IDENTIFIED BY 'replace-with-another-local-password';
-GRANT ALL PRIVILEGES ON greenly.* TO 'greenly_dev'@'localhost';
-GRANT ALL PRIVILEGES ON greenly_e2e.* TO 'greenly_e2e'@'localhost';
-```
+再実行では接続設定と既存データを再利用します。認証・権限・スキーマの確認に失敗した場合は「完了」と表示せず、原因を表示します。別PCへはソースと同梱アセットを渡し、`.env`・`.env.e2e`・`node_modules`・`backend/.venv`・MySQLデータはコピーしないでください。詳細は[`docs/windows-setup.md`](docs/windows-setup.md)を参照してください。
 
 ## 起動
 
 リポジトリ直下の`start.bat`をダブルクリックすると、必要な依存関係を確認・準備してからAPIとWebを同じコンソールに出力して起動します。プロジェクトのフォルダーを移動しても、バッチ自身の場所からPowerShellスクリプトや依存ファイルを解決します。起動後はその画面を閉じず、停止時にCtrl+Cを押してください。`Terminate batch job (Y/N)?`が表示されたら`N`を押すと、起動スクリプトの停止処理が完了します。その後、キー入力でコンソールを閉じます。
 
-初回は`.env.example`を`.env`へコピーし、MySQLユーザーとパスワードを設定します。`.env`がない場合、ユーザー名は`greenly_dev`、パスワードは起動時に非表示で入力できます。プロセス環境変数が設定済みの場合は`.env`より優先します。
+`setup.bat`で準備した接続情報を使うため、通常の起動時はパスワード入力不要です。プロセス環境変数が設定済みの場合は`.env`より優先します。rootのパスワードを専用ユーザー用として入力する必要はありません。
 
 ```powershell
-Copy-Item .env.example .env
-# .envを編集してGREENLY_DB_PASSWORDを設定
+.\setup.bat
 .\start.bat
 ```
 
@@ -65,7 +54,7 @@ API起動前にAlembic移行を実行します。新規DBは0001/0002でテー�
 
 停止時にCtrl+Cを押すと、この起動スクリプトが起動したAPI・Webプロセスを停止します。既に起動していたAPIは停止しません。APIが起動に失敗した場合は、子プロセス終了を検出して長時間待たずにエラーを表示します。Viteは`/api`を選択されたAPIポートへproxyします。CORSの全許可設定は追加していません。
 
-E2Eでは引き続き専用の`GREENLY_E2E_DB_USER`と`GREENLY_E2E_DB_PASSWORD`を、実行するPowerShellの環境変数として設定します。起動スクリプトはE2E用DB資格情報を読み込みません。
+E2Eはsetupが作成した`.env.e2e`を使用します。API起動時のe2e profileだけが読み込み、WebへDB資格情報を渡しません。専用MySQLを選んだPCでは、再起動後もAPI起動時に同じMySQLの保存先から復帰します。
 
 ## 操作
 
