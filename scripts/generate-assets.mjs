@@ -14,7 +14,7 @@ const assets = [
   {
     file: 'tree-oak.glb',
     parts: [
-      cylinder('#80603b', [0, 1.35, 0], [0.36, 2.7, 0.36]),
+      cylinder('#80603b', [0, 1, 0], [0.36, 2, 0.36]),
       sphere('#4f7f45', [0, 3, 0], [2, 2, 2]),
     ],
   },
