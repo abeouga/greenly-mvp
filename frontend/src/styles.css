@@ -1,21 +1,11 @@
 :root {
   font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
-  color: #27342a;
-  background: #f4f4ed;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  --ink: #27342a;
-  --muted: #778174;
-  --line: #e5e8dd;
-  --paper: #fffefa;
-  --green: #406d4a;
-  --green-dark: #305539;
-  --green-soft: #eaf0e6;
-  --ochre: #bd7834;
-  --danger: #a14d40;
-  --shadow: 0 10px 30px rgba(47, 61, 43, 0.045);
+  font-synthesis: none; text-rendering: optimizeLegibility;
+  color: #283630; background: #f5f6f4;
+  --ink: #283630; --muted: #737d77; --paper: #fff; --line: #e0e5df;
+  --green: #285d49; --green-dark: #1b4938; --green-soft: #eef4ee;
+  --danger: #a04436; --ochre: #c09a54;
 }
-
 * { box-sizing: border-box; }
 
 body {

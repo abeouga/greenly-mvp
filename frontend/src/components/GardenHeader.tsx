@@ -1,3 +1,5 @@
+import { UiIcon } from './UiIcon';
+
 interface GardenHeaderProps {
   title: string;
   subtitle?: string;
@@ -22,7 +24,7 @@ export function GardenHeader({ title, subtitle }: GardenHeaderProps) {
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
       </div>
-      <span className="version-tag">手動3Dエディタ</span>
+      <span className="version-tag">Garden workspace</span>
     </header>
   );
 }

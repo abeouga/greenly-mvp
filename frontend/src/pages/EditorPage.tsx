@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/http';
 import { gardenApi } from '../api/gardens';
 import { GardenHeader } from '../components/GardenHeader';
 import { CatalogPanel } from '../components/CatalogPanel';
 import { PropertiesPanel } from '../components/PropertiesPanel';
+import { GardenDimensions } from '../components/GardenDimensions';
 import { clearGardenModelCache, GardenCanvas } from '../three/GardenCanvas';
 import { useEditorStore } from '../stores/editorStore';
 import { PhotoOverlay } from '../components/PhotoOverlay';
 import { validSurface } from '../domain/photoProjection';
+import { calibratedBoundaryError } from '../domain/calibratedProjection';
+import { Dialog } from '../components/Dialog';
+import { UiIcon } from '../components/UiIcon';
 
 interface EditorPageProps {
   gardenId: string;
@@ -32,6 +36,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   const isSaving = useEditorStore((state) => state.isSaving);
   const isTransformDragging = useEditorStore((state) => state.isTransformDragging);
   const photoBoundaryDraft = useEditorStore((state) => state.photoBoundaryDraft);
+  const isCalibrating = useEditorStore((state) => state.isCalibrating);
   const hasBoundaryDraft = photoBoundaryDraft !== null;
   const saveError = useEditorStore((state) => state.saveError);
   const failedModelIds = useEditorStore((state) => state.failedModelIds);
@@ -49,6 +54,9 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   const [viewMode, setViewMode] = useState<'photo' | '3d'>('3d');
   const [catalogCollapsed, setCatalogCollapsed] = useState(false);
   const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
+  const [dimensionsOpen, setDimensionsOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const allowNavigation = useRef(false);
 
   useEffect(() => {
     if (gardenQuery.data) {
@@ -58,19 +66,25 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   }, [gardenQuery.data]);
 
   useEffect(() => {
-    if (!isDirty && !hasBoundaryDraft) return;
+    if (!isDirty && !hasBoundaryDraft && !isCalibrating) return;
     const confirmUnload = (event: BeforeUnloadEvent) => {
+      if (allowNavigation.current) return;
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', confirmUnload);
     return () => window.removeEventListener('beforeunload', confirmUnload);
-  }, [isDirty, hasBoundaryDraft]);
+  }, [isDirty, hasBoundaryDraft, isCalibrating]);
 
   useEffect(() => {
     function handleDeleteKey(event: KeyboardEvent) {
       const target = event.target;
+      if (useEditorStore.getState().isCalibrating) return;
       if (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      if (event.key === 'Escape' && useEditorStore.getState().selectedAssetId) {
+        useEditorStore.getState().selectAsset(null);
+        return;
+      }
       if ((event.key === 'Delete' || event.key === 'Backspace') && useEditorStore.getState().selectedObjectId && !useEditorStore.getState().isSaving && !useEditorStore.getState().isTransformDragging) {
         event.preventDefault();
         useEditorStore.getState().deleteSelected();
@@ -95,11 +109,16 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   function save() {
     const state = useEditorStore.getState();
     if (!state.document || !state.isDirty || state.isSaving || state.isTransformDragging) return;
+    if (state.isCalibrating) return;
     if (state.photoBoundaryDraft !== null) {
       state.setSaveError('描画中の輪郭を確定または取消してから保存してください。'); return;
     }
     if (state.document.photo && !validSurface(state.document.photo)) {
       state.setSaveError('庭の輪郭を始点につないで確定してから保存してください。'); return;
+    }
+    if (state.document.photo) {
+      const error = calibratedBoundaryError(state.document.photo, state.document.width, state.document.depth);
+      if (error) { state.setSaveError(error); return; }
     }
     const snapshot = structuredClone(state.document);
     state.setSaving(true);
@@ -109,7 +128,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
 
   function goToList() {
     const state = useEditorStore.getState();
-    if ((state.isDirty || state.photoBoundaryDraft !== null) && !window.confirm('保存していない変更を破棄して庭一覧へ戻りますか？')) return;
+    if (state.isDirty || state.photoBoundaryDraft !== null || state.isCalibrating) { setLeaveOpen(true); return; }
     window.location.assign('/');
   }
 
@@ -143,19 +162,22 @@ export function EditorPage({ gardenId }: EditorPageProps) {
   const selectedAsset = selectedObject ? assetMap.get(selectedObject.assetId) ?? null : null;
   const canvasHint = hasBoundaryDraft ? '庭の輪郭をクリックで描き、始点につないで確定'
     : selectedAssetId
-    ? '地面をクリックして配置'
+    ? `${assetMap.get(selectedAssetId)?.name ?? '素材'}を配置中 · 地面をクリック / Escで終了`
+    : selectedObject && viewMode === 'photo' ? '位置・回転・倍率は右の数値で調整'
     : selectedObject && tool === 'rotate'
       ? '円形ハンドルをドラッグして角度を調整'
       : 'オブジェクトを選択して編集';
-  const statusText = isSaving ? '保存中…' : hasBoundaryDraft ? '輪郭を描画中' : isDirty ? '未保存の変更' : '保存済み';
-  const isEditingDisabled = isSaving || isTransformDragging;
-  const photoReady = !hasBoundaryDraft && (!document.photo || validSurface(document.photo));
+  const statusText = isSaving ? '保存中…' : isCalibrating ? 'カメラを設定中' : hasBoundaryDraft ? '輪郭を描画中' : isDirty ? '未保存の変更' : '保存済み';
+  const isEditingDisabled = isSaving || isTransformDragging || isCalibrating;
+  const photoReady = !hasBoundaryDraft && !isCalibrating && (!document.photo || (validSurface(document.photo) && !calibratedBoundaryError(document.photo, document.width, document.depth)));
 
   return (
     <div className="editor-shell">
-      <GardenHeader title={document.name} subtitle={`${document.width} × ${document.depth} m · 中心原点 · 1目盛り = 1m`} />
-      <div className="editor-toolbar">
-        <button className="button button-secondary list-button" onClick={goToList} disabled={isEditingDisabled}>← 庭一覧</button>
+      <header className="document-bar">
+        <button className="brand-mark editor-brand" aria-label="Greenly 庭一覧へ" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="leaf" size={25} /><span>Greenly</span></button>
+        <button className="icon-button list-button" aria-label="← 庭一覧" title="庭一覧に戻る" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="back" /></button>
+        <div className="document-title"><h1>{document.name}</h1><span>{document.photo && document.photo.boundary.length >= 3
+          ? `${document.photo.boundary.length}辺の庭` : `${document.width} × ${document.depth} m`}</span></div>
         <div className="toolbar-status" aria-live="polite">
           <span className={`status-dot${isDirty || hasBoundaryDraft ? ' status-dirty' : ''}`} />
           <span data-testid="save-status">{statusText}</span>
@@ -163,7 +185,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
         <button className="button button-primary save-button" data-testid="save-garden" onClick={save} disabled={!isDirty || isSaving || isTransformDragging || !photoReady}>
           {isSaving ? '保存中…' : saveError ? '再試行して保存' : '保存'}
         </button>
-      </div>
+      </header>
 
       {saveError && (
         <div className="editor-alert notice-error" role="alert">
@@ -171,7 +193,7 @@ export function EditorPage({ gardenId }: EditorPageProps) {
           <button type="button" onClick={save} disabled={isSaving || isTransformDragging}>再試行</button>
         </div>
       )}
-      {!photoReady && <div className="editor-alert photo-progress" role="status">{hasBoundaryDraft ? '庭の輪郭を描画中です。始点につないで確定するか、描画を取消してください。' : '写真上で庭の輪郭を描き、始点につないで確定してから保存してください。'}</div>}
+      {!photoReady && !hasBoundaryDraft && !isCalibrating && <div className="editor-alert photo-progress" role="status">写真上の庭の輪郭と実寸範囲を確認してから保存してください。</div>}
       {assetQuery.isError && (
         <div className="editor-alert notice-error" role="alert">
           <span>オブジェクトカタログを読み込めませんでした。</span>
@@ -187,27 +209,23 @@ export function EditorPage({ gardenId }: EditorPageProps) {
         </div>
       )}
 
-      <main className={`editor-layout${catalogCollapsed ? ' editor-layout-catalog-collapsed' : ''}${propertiesCollapsed ? ' editor-layout-properties-collapsed' : ''}`}>
-        <CatalogPanel
-          assets={assets}
-          selectedAssetId={selectedAssetId}
-          disabled={isEditingDisabled || hasBoundaryDraft || assetQuery.isError}
-          collapsed={catalogCollapsed}
-          onSelect={selectAsset}
-          onToggle={() => setCatalogCollapsed((collapsed) => !collapsed)}
-        />
+      <main className={`editor-layout${propertiesCollapsed ? ' inspector-hidden' : ''}`}>
         <section className="canvas-column" aria-label="庭の3D編集エリア">
           <div className="canvas-tools">
-            <span className="canvas-tool-hint">{canvasHint}</span>
-            <div className="view-mode-actions">
-              <button type="button" aria-pressed={viewMode === 'photo'} onClick={() => setViewMode('photo')}>写真＋設計</button>
-              <button type="button" aria-pressed={viewMode === '3d'} disabled={hasBoundaryDraft} onClick={() => setViewMode('3d')}>3D庭</button>
+            <div className="view-mode-actions" role="group" aria-label="表示モード">
+              <button type="button" aria-pressed={viewMode === 'photo'} disabled={isCalibrating} onClick={() => setViewMode('photo')}><UiIcon name="photo" />写真＋設計</button>
+              <button type="button" aria-pressed={viewMode === '3d'} disabled={hasBoundaryDraft || isCalibrating} onClick={() => setViewMode('3d')}><UiIcon name="cube" />3D庭</button>
             </div>
             <div className="camera-actions">
-              {viewMode === '3d' && <button type="button" onClick={() => commandCamera('top')} disabled={isEditingDisabled}>上から見る</button>}
-              {viewMode === '3d' && <button type="button" onClick={() => commandCamera('home')} disabled={isEditingDisabled}>初期視点</button>}
+              {viewMode === '3d' && !document.photo && <button type="button" aria-haspopup="dialog" onClick={() => setDimensionsOpen(true)} disabled={isEditingDisabled}><UiIcon name="ruler" />土台設定</button>}
+              {viewMode === '3d' && <button type="button" onClick={() => commandCamera('top')} disabled={isEditingDisabled}><UiIcon name="top" />上から見る</button>}
+              {viewMode === '3d' && <button type="button" onClick={() => commandCamera('home')} disabled={isEditingDisabled}><UiIcon name="home" />初期視点</button>}
+              <button type="button" className="inspector-toggle" aria-label={propertiesCollapsed ? '配置済み・プロパティパネルを表示' : '配置済み・プロパティパネルを隠す'} aria-expanded={!propertiesCollapsed} aria-controls="properties-panel" onClick={() => setPropertiesCollapsed(!propertiesCollapsed)}><UiIcon name="panel" /><span>配置・編集</span></button>
             </div>
           </div>
+          {dimensionsOpen && viewMode === '3d' && !document.photo && <Dialog title="土台のサイズ" description="庭の中心を基準に、幅と奥行きを変更します。" closeLabel="土台設定を閉じる" onClose={() => setDimensionsOpen(false)}>
+            <GardenDimensions key={`${document.id}:${document.width}:${document.depth}`} document={document} disabled={isEditingDisabled || hasBoundaryDraft} />
+          </Dialog>}
           {viewMode === 'photo' ? <PhotoOverlay document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled}
             retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed} /> : assetQuery.isLoading ? (
             <div className="canvas-loading" role="status">アセット一覧を読み込んでいます…</div>
@@ -223,17 +241,18 @@ export function EditorPage({ gardenId }: EditorPageProps) {
             />
           )}
           <div className="canvas-footer">
-            <span>1 Three.js unit = 1m</span>
+            <span className="canvas-tool-hint" aria-live="polite">{canvasHint}</span>
             <span data-testid="model-loaded">読み込み済み: {loadedModelIds.length} / {document.objects.length}</span>
-            <span>配置数 {document.objects.length} / 200</span>
+            <span>1目盛り = 1m</span>
           </div>
         </section>
-        <PropertiesPanel
+        {!propertiesCollapsed && <PropertiesPanel
           document={document}
           assets={assets}
           selectedObject={selectedObject}
           selectedAsset={selectedAsset}
           tool={tool}
+          photoMode={viewMode === 'photo'}
           disabled={isEditingDisabled}
           collapsed={propertiesCollapsed}
           onSelectObject={selectObject}
@@ -241,8 +260,16 @@ export function EditorPage({ gardenId }: EditorPageProps) {
           onDuplicate={duplicateSelected}
           onDelete={deleteSelected}
           onToggle={() => setPropertiesCollapsed((collapsed) => !collapsed)}
-        />
+        />}
+        <CatalogPanel assets={assets} selectedAssetId={selectedAssetId}
+          disabled={isEditingDisabled || hasBoundaryDraft || assetQuery.isError} collapsed={catalogCollapsed}
+          onSelect={selectAsset}
+          onToggle={() => setCatalogCollapsed((collapsed) => !collapsed)} />
       </main>
+      {leaveOpen && <Dialog title="変更を保存せずに戻りますか？" description="保存していない編集内容は破棄されます。" onClose={() => setLeaveOpen(false)} footer={<>
+        <button type="button" className="button button-secondary" data-dialog-autofocus onClick={() => setLeaveOpen(false)}>編集を続ける</button>
+        <button type="button" className="button button-danger" onClick={() => { allowNavigation.current = true; window.location.assign('/'); }}>変更を破棄して戻る</button>
+      </>}><p>「{document.name}」の最後に保存した状態は残ります。</p></Dialog>}
     </div>
   );
 }

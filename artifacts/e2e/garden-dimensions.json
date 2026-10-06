@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "b035ff79-d1f9-4b4d-856d-18295fcb182f",
+  "revision": 1,
+  "name": "E2E dimensions 1790944156571",
+  "width": 14,
+  "depth": 12,
+  "objects": [
+    {
+      "id": "b128d76a-2228-4efc-9910-f28b9f5d67f6",
+      "assetId": "tree_oak",
+      "position": {
+        "x": 6,
+        "y": 0,
+        "z": -7.936508012605561e-7
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ],
+  "photo": null
+}

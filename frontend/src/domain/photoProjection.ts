@@ -1,4 +1,4 @@
-import type { GardenPhoto, ImagePoint } from '../types/garden';
+import type { GardenPhoto, ImagePoint } from '../types/garden.js';
 
 // A projective transform maps the metric ground plane to the four image corners.
 // It aligns only points on y=0; a single photograph cannot locate tall objects in 3D.
@@ -82,6 +82,7 @@ export function validBoundary(points: ImagePoint[]) {
 
 export function validSurface(photo: GardenPhoto) {
   if (!validCorners(photo.corners) || !validBoundary(photo.boundary)) return false;
+  if (photo.projectionSize || photo.calibration) return true;
   return photo.boundary.every((point) => photo.corners.every((a, index) =>
     orientation(a, photo.corners[(index + 1) % 4], point) <= 0.000001));
 }
@@ -89,6 +90,7 @@ export function validSurface(photo: GardenPhoto) {
 // Map the drawn outline's image bounds to the garden's width/depth.
 // The four transform anchors are derived data, not four user clicks.
 export function withPhotoBoundary(photo: GardenPhoto, boundary: ImagePoint[]): GardenPhoto {
+  if (photo.projectionSize) return { ...photo, boundary };
   if (boundary.length === 0) return { ...photo, corners: [], boundary };
   const left = Math.min(...boundary.map((p) => p.x)), right = Math.max(...boundary.map((p) => p.x));
   const top = Math.min(...boundary.map((p) => p.y)), bottom = Math.max(...boundary.map((p) => p.y));

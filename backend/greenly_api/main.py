@@ -11,11 +11,20 @@ from sqlalchemy.orm import Session, sessionmaker
 from starlette.exceptions import HTTPException
 
 from . import service
+from .calibration import solve_calibration
 from .config import Settings
 from .database import create_database_engine
 from .errors import ApiError
 from .migrations import HEAD, current_revision, validate_schema
-from .schemas import AssetResponse, CreateGardenRequest, GardenDocument, GardenDocumentRequest, GardenSummary
+from .schemas import (
+    AssetResponse,
+    CalibrationRequest,
+    CreateGardenRequest,
+    GardenDocument,
+    GardenDocumentRequest,
+    GardenSummary,
+    PhotoCalibration,
+)
 
 
 def error_response(status: int, code: str, message: str) -> JSONResponse:
@@ -82,6 +91,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             yield session
 
     Db = Annotated[Session, Depends(get_session)]
+
+    @app.post("/api/photo-calibration", response_model=PhotoCalibration)
+    def calibrate(request: CalibrationRequest):
+        return solve_calibration(request)
 
     @app.get("/api/assets", response_model=list[AssetResponse])
     def assets(db: Db):

@@ -3,8 +3,11 @@ import io
 import math
 from uuid import UUID
 
+import cv2
+import numpy as np
 from PIL import Image
 
+from .calibration import validate_calibrated_photo
 from .errors import bad_request
 from .schemas import GardenDocumentRequest, GardenPhoto, ImagePoint
 
@@ -33,6 +36,25 @@ def validate_document(document: GardenDocumentRequest) -> None:
             bad_request("INVALID_OBJECT_SCALE", "倍率は0.25〜3.0の一様な値にしてください。")
     if document.photo is not None:
         validate_photo(document.photo)
+        validate_calibrated_photo(document.photo, document.width, document.depth)
+        validate_projection_frame(document.photo, document.width, document.depth)
+
+
+def validate_projection_frame(photo: GardenPhoto, width: float, depth: float) -> None:
+    frame = photo.projectionSize
+    if frame is None or photo.calibration is not None:
+        return
+    source = np.array([[p.x, p.y] for p in photo.corners], dtype=np.float32)
+    target = np.array([[-frame.width / 2, frame.depth / 2], [frame.width / 2, frame.depth / 2],
+                       [frame.width / 2, -frame.depth / 2], [-frame.width / 2, -frame.depth / 2]], dtype=np.float32)
+    transform = cv2.getPerspectiveTransform(source, target)
+    for p in photo.boundary:
+        mapped = transform @ np.array([p.x, p.y, 1])
+        if abs(mapped[2]) < 1e-8:
+            bad_request('INVALID_PHOTO_BOUNDARY', '輪郭を地面上に指定してください。')
+        x, z = mapped[:2] / mapped[2]
+        if abs(x) > width / 2 + 0.05 or abs(z) > depth / 2 + 0.05:
+            bad_request('INVALID_PHOTO_BOUNDARY', '輪郭が土台の実寸範囲を超えています。')
 
 
 def orientation(a: ImagePoint, b: ImagePoint, c: ImagePoint) -> float:
@@ -89,7 +111,7 @@ def validate_photo(photo: GardenPhoto) -> None:
     for point in photo.boundary:
         if not image_point_valid(point):
             bad_request("INVALID_PHOTO_BOUNDARY", "輪郭点は画像内に指定してください。")
-        if any(orientation(a, photo.corners[(i + 1) % 4], point) > 0.000001
+        if not photo.calibration and not photo.projectionSize and any(orientation(a, photo.corners[(i + 1) % 4], point) > 0.000001
                for i, a in enumerate(photo.corners)):
             bad_request("INVALID_PHOTO_BOUNDARY", "輪郭点は四隅の内側に指定してください。")
     area = 0.0

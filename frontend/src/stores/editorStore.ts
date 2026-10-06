@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { addObject, changeObjectTransform, createPlacedObject, duplicateObject, removeObject } from '../domain/gardenEditing';
 import { validSurface, withPhotoBoundary } from '../domain/photoProjection';
+import { dimensionError } from '../domain/gardenDimensions';
+import { changeEdgeLength } from '../domain/polygonEdges';
 import type { GardenAsset, GardenDocument, GardenPhoto, ImagePoint, TransformTool } from '../types/garden';
 
 interface EditorState {
@@ -11,6 +13,8 @@ interface EditorState {
   isDirty: boolean;
   isSaving: boolean;
   isTransformDragging: boolean;
+  isCalibrating: boolean;
+  setCalibrating: (value: boolean) => void;
   photoBoundaryDraft: ImagePoint[] | null;
   saveError: string | null;
   editError: string | null;
@@ -19,6 +23,8 @@ interface EditorState {
   failedModelIds: string[];
   hydrate: (document: GardenDocument) => void;
   setPhoto: (photo: GardenPhoto | null) => void;
+  resizeGarden: (width: number, depth: number) => boolean;
+  setEdgeLength: (index: number, length: number) => string | null;
   setPhotoBoundaryDraft: (points: ImagePoint[] | null) => void;
   confirmPhotoBoundary: () => boolean;
   addAssetAt: (asset: GardenAsset, x: number, z: number) => void;
@@ -47,6 +53,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isDirty: false,
   isSaving: false,
   isTransformDragging: false,
+  isCalibrating: false,
+  setCalibrating: (isCalibrating) => set({ isCalibrating }),
   photoBoundaryDraft: null,
   saveError: null,
   editError: null,
@@ -63,12 +71,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       isDirty: false,
       isSaving: false,
       isTransformDragging: false,
+      isCalibrating: false,
       photoBoundaryDraft: null,
       saveError: null,
       editError: null,
       loadedModelIds: [],
       failedModelIds: [],
     });
+  },
+  setEdgeLength: (index, length) => {
+    const state = get();
+    if (!state.document || state.isSaving || state.isCalibrating || state.isTransformDragging || state.photoBoundaryDraft !== null) return '操作を完了してから変更してください。';
+    const result = changeEdgeLength(state.document, index, length);
+    if (!result.document) return result.error ?? '辺の長さを変更できません。';
+    set({ document: result.document, isDirty: true, saveError: null, editError: null });
+    return null;
+  },
+  resizeGarden: (width, depth) => {
+    const state = get();
+    if (!state.document || state.isSaving || state.isCalibrating || state.isTransformDragging || state.photoBoundaryDraft !== null) return false;
+    if (dimensionError(state.document, width, depth)) return false;
+    if (width === state.document.width && depth === state.document.depth) return true;
+    set({ document: { ...state.document, width, depth }, isDirty: true, saveError: null, editError: null });
+    return true;
   },
   setPhoto: (photo) => {
     const state = get();

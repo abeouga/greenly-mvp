@@ -114,13 +114,14 @@ test('A. 庭作成からGLB配置・変形・保存・再読み込みまで', as
   await page.getByRole('button', { name: '← 庭一覧' }).click();
   await page.waitForURL('/');
   const deleteButton = card.getByRole('button', { name: `${name}を削除` });
-  page.once('dialog', (dialog) => dialog.dismiss());
   await deleteButton.click();
+  await expect(page.getByRole('dialog', { name: 'この庭を削除しますか？' })).toContainText(name);
+  await page.getByRole('button', { name: '取消', exact: true }).click();
   await expect(card.locator('.garden-card-open')).toBeVisible();
   expect((await request.get(`${apiBase}/gardens/${id}`)).status()).toBe(200);
 
-  page.once('dialog', (dialog) => dialog.accept());
   await deleteButton.click();
+  await page.getByRole('button', { name: '庭を削除', exact: true }).click();
   await expect(card).toHaveCount(0);
   expect((await request.get(`${apiBase}/gardens/${id}`)).status()).toBe(404);
 });

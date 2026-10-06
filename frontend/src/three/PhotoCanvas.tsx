@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Canvas, events, type DomEvent, type RootState, type RootStore } from '@react-three/fiber';
-import { Vector3 } from 'three';
+import { PerspectiveCamera, Vector3 } from 'three';
 import { useEditorStore } from '../stores/editorStore';
 import type { GardenAsset, GardenDocument, GardenObject } from '../types/garden';
 import { GardenGround } from './GardenGround';
@@ -25,6 +25,10 @@ function photoEvents(store: RootStore) {
   return { ...events(store), compute: (event: DomEvent, root: RootState) => {
     const bounds = root.gl.domElement.getBoundingClientRect();
     root.pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+    if (root.camera instanceof PerspectiveCamera) {
+      root.raycaster.setFromCamera(root.pointer, root.camera);
+      return;
+    }
     // Sample near the depth centre so a legacy projective transform cannot put
     // the two samples on opposite sides of infinity. Standard orthographic
     // rays assume an unmodified projection matrix and would miss the ground.
