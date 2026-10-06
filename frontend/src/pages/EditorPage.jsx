@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/http';
 import { gardenApi } from '../api/gardens';
 import { GardenHeader } from '../components/GardenHeader';
+import { GreenlyIcon } from '../components/GreenlyIcon';
 import { CatalogPanel } from '../components/CatalogPanel';
 import { PropertiesPanel } from '../components/PropertiesPanel';
 import { GardenDimensions } from '../components/GardenDimensions';
@@ -171,7 +172,7 @@ export function EditorPage({ gardenId }) {
     const photoReady = !hasBoundaryDraft && !isCalibrating && (!document.photo || (validSurface(document.photo) && !calibratedBoundaryError(document.photo, document.width, document.depth)));
     return (<div className="editor-shell">
       <header className="document-bar">
-        <button className="brand-mark editor-brand" aria-label="Greenly 庭一覧へ" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="leaf" size={25}/><span>Greenly</span></button>
+        <button className="brand-mark editor-brand" aria-label="Greenly 庭一覧へ" onClick={goToList} disabled={isEditingDisabled}><GreenlyIcon/><span>Greenly</span></button>
         <button className="icon-button list-button" aria-label="← 庭一覧" title="庭一覧に戻る" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="back"/></button>
         <div className="document-title"><h1>{document.name}</h1><span>{document.photo && document.photo.boundary.length >= 3
             ? `${document.photo.boundary.length}辺の庭` : `${document.width} × ${document.depth} m`}</span></div>
