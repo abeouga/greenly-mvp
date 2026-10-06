@@ -40,12 +40,10 @@
 .edge-popover header .icon-button { margin: -5px -6px 0 0; }
 .popover-caption { display: flex; align-items: center; gap: 6px; color: #839079; font-size: 10px; }
 .edge-popover h3 { margin-top: 7px; font-size: 16px; }
-.edge-input-label { display: grid; gap: 7px; font-size: 11px; }
-.edge-input-label input { min-height: 44px; font-size: 23px; font-weight: 500; padding: 9px 12px; }
+.edge-measurement { display: grid; gap: 7px; font-size: 11px; }
+.edge-measurement output { font-size: 23px; font-weight: 500; font-variant-numeric: tabular-nums; color: #244d3d; }
 .edge-popover p { margin: 12px 0; color: #627357; font-size: 12px; line-height: 1.75; }
 .edge-popover .edge-warning { padding: 9px 10px; background: #f9f5eb; color: #806b3a; border-radius: 5px; font-size: 11px; }
 .edge-popover p.notice-error { color: var(--danger); }
-.edge-neighbor { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 0; border-top: 1px solid #eaf0e5; font-size: 11px; color: #8b977e; }
-.edge-neighbor span { color: #47613e; font-variant-numeric: tabular-nums; }
 .edge-popover footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e8eee2; }
 .edge-popover .button { min-height: 34px; padding: 7px 13px; font-size: 11px; }

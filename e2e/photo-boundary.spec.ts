@@ -74,6 +74,28 @@ async function saveArtifact(request: APIRequestContext, id: string, name: string
   return document;
 }
 
+// WebGL antialiasing can round a color channel by one level on identical frames.
+// Decode pixels instead of comparing PNG bytes; any larger visual change still fails.
+async function maximumPixelDifference(page: Page, before: Buffer, after: Buffer) {
+  return page.evaluate(async (images) => {
+    const pixels = await Promise.all(images.map(async (data) => {
+      const image = new Image();
+      image.src = 'data:image/png;base64,' + data;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      return { width: canvas.width, height: canvas.height, data: context.getImageData(0, 0, canvas.width, canvas.height).data };
+    }));
+    if (pixels[0].width !== pixels[1].width || pixels[0].height !== pixels[1].height) return 255;
+    let difference = 0;
+    for (let index = 0; index < pixels[0].data.length; index++)
+      difference = Math.max(difference, Math.abs(pixels[0].data[index] - pixels[1].data[index]));
+    return difference;
+  }, [before.toString('base64'), after.toString('base64')]);
+}
+
 test('I. 仮線追従・始点で6点輪郭確定・配置・保存復元・3D切替', async ({ page, request }) => {
   const { id, imageDataUrl } = await preparePhoto(page);
   await expect(page.getByTestId('photo-ground')).toHaveCount(0);
@@ -330,16 +352,23 @@ test('N. 木の3D・写真相互配置、固定カメラ、頂点番号非表示
   await clickImage(page, 0.3, 0.63);
   await expect(page.getByTestId('object-row-1')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('object-row-2')).toHaveCount(0);
-  const beforeDrag = await page.locator('.photo-stage').screenshot();
+  await page.getByTestId('save-garden').click();
+  await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+  const beforeDragDocument = await gardenJson(request, id);
+  const beforeDragOutline = await page.getByTestId('photo-ground').getAttribute('points');
+  const beforeDrag = await page.locator('.photo-stage').screenshot({ path: resolve(artifactDirectory, 'photo-fixed-camera-before-drag.png') });
   const a = await screenPoint(page, 0.72, 0.72), b = await screenPoint(page, 0.6, 0.72);
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
   await page.mouse.move(b.x, b.y, { steps: 8 });
   await page.mouse.up();
-  expect((await page.locator('.photo-stage').screenshot()).equals(beforeDrag)).toBe(true);
-  await page.getByTestId('save-garden').click();
+  const afterDrag = await page.locator('.photo-stage').screenshot({ path: resolve(artifactDirectory, 'photo-fixed-camera-after-drag.png') });
+  expect(await maximumPixelDifference(page, beforeDrag, afterDrag)).toBeLessThanOrEqual(1);
+  await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', beforeDragOutline!);
+  await expect(page.getByTestId('save-garden')).toBeDisabled();
   await expect(page.getByTestId('save-status')).toHaveText('保存済み');
   const saved = await saveArtifact(request, id, 'garden-photo-trees.json');
+  expect(saved).toEqual(beforeDragDocument);
   expect(saved.photo?.dataUrl).toBe(imageDataUrl);
   expect(saved.objects).toHaveLength(2);
   expect(saved.objects.every((object) => object.assetId === 'tree_oak')).toBe(true);

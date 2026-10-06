@@ -56,6 +56,7 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     await page.getByLabel('庭の写真を選択').setInputFiles({ name: 'camera.png', mimeType: 'image/png', buffer: Buffer.from(dataUrl.split(',')[1], 'base64') });
     for (const p of corners) await clickPoint(page, '.photo-stage', p);
     await page.getByTestId('photo-vertex-1').click();
+    const uncalibrated = await page.getByTestId('photo-ground').getAttribute('points');
     await page.getByRole('button', { name: '写真のカメラを設定' }).click();
     await expect(page.getByTestId('save-garden')).toBeDisabled();
     await expect(page.getByRole('button', { name: '3D庭', exact: true })).toBeDisabled();
@@ -63,6 +64,7 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     await page.getByRole('button', { name: 'カメラを計算', exact: true }).click();
     await expect(page.getByTestId('calibration-quality')).toBeVisible();
     await page.getByRole('button', { name: 'カメラを適用', exact: true }).click();
+    await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', uncalibrated!);
     await expect(page.getByTestId('photo-model-canvas')).toBeVisible();
     await expect(page.getByTestId('photo-vertex-number')).toHaveCount(0);
     // Real pointer rays must recover the same metric coordinates, even after resize.
@@ -118,21 +120,44 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     await page.getByRole('button', { name: 'カメラ設定を取消' }).click();
     await expect(page.getByTestId('save-status')).toHaveText('保存済み');
     expect(await (await request.get(`${api}/gardens/${initial.id}`)).json()).toEqual(saved);
+    const outline = await page.getByTestId('photo-ground').getAttribute('points');
     await page.getByTestId('photo-edge-0').click();
-    await page.getByLabel('長さ (m)', { exact: true }).fill('8');
-    await page.getByRole('button', { name: '長さを適用' }).click();
+    await expect(page.getByRole('dialog', { name: '選択した辺の長さ' })).toContainText('現在の実寸');
+    expect(parseFloat((await page.getByTestId('edge-measurement').textContent())!)).toBeCloseTo(10, 1);
+    await expect(page.getByLabel('長さ (m)', { exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+    // Change the metric scale in the calibration UI; the photographed outline must stay fixed.
+    await page.getByRole('button', { name: '写真のカメラを設定' }).click();
+    await page.getByLabel('基準の幅（m）').fill('8');
+    await page.getByLabel('基準の奥行き（m）').fill('6.4');
+    await expect(page.getByRole('button', { name: 'カメラを適用', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'カメラを計算', exact: true }).click();
+    await expect(page.getByTestId('calibration-quality')).toBeVisible();
+    await page.getByRole('button', { name: 'カメラを適用', exact: true }).click();
+    await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+    await page.getByTestId('photo-edge-0').click();
+    expect(parseFloat((await page.getByTestId('edge-measurement').textContent())!)).toBeCloseTo(8, 1);
+    await page.keyboard.press('Escape');
     await page.getByTestId('save-garden').click();
     await expect(page.getByTestId('save-status')).toHaveText('保存済み');
     const edited = await (await request.get(`${api}/gardens/${initial.id}`)).json() as GardenDocument;
-    expect(edited.photo!.calibration).toEqual(saved.photo!.calibration);
+    expect(edited.photo!.calibration!.referenceWidth).toBe(8);
+    expect(edited.photo!.calibration!.referenceDepth).toBe(6.4);
+    expect(edited.photo!.calibration!.points).toEqual(saved.photo!.calibration!.points);
     expect(edited.objects).toEqual(saved.objects);
-    expect(edited.photo!.boundary[0]).toEqual(saved.photo!.boundary[0]);
-    expect(edited.photo!.boundary.slice(2)).toEqual(saved.photo!.boundary.slice(2));
+    expect(edited.photo!.boundary).toEqual(saved.photo!.boundary);
+    expect(edited.photo!.corners).toEqual(saved.photo!.corners);
+    expect(edited.photo!.projectionSize).toEqual(saved.photo!.projectionSize);
+    expect(edited.width).toBe(saved.width);
+    expect(edited.depth).toBe(saved.depth);
     await page.reload();
     await page.getByTestId('photo-edge-0').click();
-    await expect(page.getByLabel('長さ (m)', { exact: true })).toHaveValue('8.00');
-    await page.screenshot({ path: resolve(artifacts, 'camera-calibrated-edge.png'), fullPage: true });
-    await writeFile(resolve(artifacts, 'camera-calibrated-edge.json'), JSON.stringify(edited, null, 2));
+    expect(parseFloat((await page.getByTestId('edge-measurement').textContent())!)).toBeCloseTo(8, 1);
+    await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+    expect(await (await request.get(`${api}/gardens/${initial.id}`)).json()).toEqual(edited);
+    await page.screenshot({ path: resolve(artifacts, 'camera-calibrated-measurement.png'), fullPage: true });
+    await writeFile(resolve(artifacts, 'camera-calibrated-measurement.json'), JSON.stringify(edited, null, 2));
   } finally { expect((await request.delete(`${api}/gardens/${initial.id}`)).status()).toBe(204); }
 });
 

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { addObject, changeObjectTransform, createPlacedObject, duplicateObject, removeObject } from '../domain/gardenEditing';
 import { validSurface, withPhotoBoundary } from '../domain/photoProjection';
 import { dimensionError } from '../domain/gardenDimensions';
-import { changeEdgeLength } from '../domain/polygonEdges';
 export const useEditorStore = create((set, get) => ({
     document: null,
     selectedObjectId: null,
@@ -37,16 +36,6 @@ export const useEditorStore = create((set, get) => ({
             loadedModelIds: [],
             failedModelIds: [],
         });
-    },
-    setEdgeLength: (index, length) => {
-        const state = get();
-        if (!state.document || state.isSaving || state.isCalibrating || state.isTransformDragging || state.photoBoundaryDraft !== null)
-            return '操作を完了してから変更してください。';
-        const result = changeEdgeLength(state.document, index, length);
-        if (!result.document)
-            return result.error ?? '辺の長さを変更できません。';
-        set({ document: result.document, isDirty: true, saveError: null, editError: null });
-        return null;
     },
     resizeGarden: (width, depth) => {
         const state = get();

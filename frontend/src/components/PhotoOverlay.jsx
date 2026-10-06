@@ -4,7 +4,7 @@ import { useEditorStore } from '../stores/editorStore';
 import { PhotoCanvas } from '../three/PhotoCanvas';
 import { PhotoCalibrationEditor } from './PhotoCalibrationEditor';
 import { calibratedBoundaryError, projectionCorners } from '../domain/calibratedProjection';
-import { PhotoEdges, EdgeLengthPopover } from './PhotoEdges';
+import { PhotoEdges, EdgeMeasurementPopover } from './PhotoEdges';
 import { UiIcon } from './UiIcon';
 export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed }) {
     const svg = useRef(null);
@@ -187,7 +187,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
     </button> : <>
       <div className={`photo-guidance photo-hint${drawingBoundary ? ' is-drawing' : ''}`} aria-live="polite">
         {drawingBoundary ? <><span className="drawing-count">{draft.length}/64点</span><span>頂点を順にクリック。3点以上で始点につなぐと確定します。</span></>
-                : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを編集 · 頂点をドラッグして輪郭を調整'}</span></>}
+                : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを確認 · 頂点をドラッグして輪郭を調整'}</span></>}
       </div>
       <div className="photo-stage-shell">
       <svg ref={svg} className="photo-stage" viewBox={`0 0 ${photo.imageWidth} ${photo.imageHeight}`} onClick={onImageClick} onPointerMove={(event) => { if (disabled)
@@ -218,12 +218,10 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
                     finishBoundary(); }} onPointerDown={(event) => { event.stopPropagation(); if (disabled || start)
                     return; setPointer(null); setDragging(index); event.currentTarget.setPointerCapture(event.pointerId); }}/>
           {drawingBoundary && <text data-testid="photo-vertex-number" x={p.x} y={p.y + 4} textAnchor="middle" fontSize={Math.max(11, photo.imageWidth / 95)} fill="#593818" pointerEvents="none">{index + 1}</text>}
-          {!drawingBoundary && selectedEdge && (index === selectedEdge.index || index === (selectedEdge.index + 1) % boundaryPoints.length) &&
-                        <text x={p.x + 14} y={p.y - 12} fontSize={Math.max(13, photo.imageWidth / 80)} fill="#244d3d" stroke="#fff" strokeWidth="3" paintOrder="stroke" pointerEvents="none">{index === selectedEdge.index ? '固定' : '移動'}</text>}
         </g>;
             })}
       </svg>
-      {selectedEdge && !drawingBoundary && boundaryValid && <EdgeLengthPopover key={`${selectedEdge.index}:${photo.boundary.map((p) => `${p.x},${p.y}`).join(';')}`} document={document} selection={selectedEdge} disabled={disabled} onClose={() => setSelectedEdge(null)}/>}
+      {selectedEdge && !drawingBoundary && boundaryValid && <EdgeMeasurementPopover key={`${selectedEdge.index}:${photo.boundary.map((p) => `${p.x},${p.y}`).join(';')}`} document={document} selection={selectedEdge} onClose={() => setSelectedEdge(null)}/>}
       </div>
     </>}
   </div>;

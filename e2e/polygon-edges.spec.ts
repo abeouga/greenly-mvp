@@ -6,86 +6,86 @@ import type { GardenDocument } from '../frontend/src/types/garden.js';
 const api = 'http://127.0.0.1:18080/api';
 const directory = resolve('artifacts/e2e');
 const boundary = [{ x: .2, y: .8 }, { x: .8, y: .8 }, { x: .8, y: .5 }, { x: .55, y: .5 }, { x: .55, y: .2 }, { x: .2, y: .2 }];
+const lengths = [10, 4, 25 / 6, 4, 35 / 6, 8];
 
-test('R. 6辺の写真輪郭を直接編集・閉じ辺・自己交差拒否・保存復元', async ({ page, request }) => {
-  await mkdir(directory, { recursive: true });
-  const initial = await (await request.post(`${api}/gardens`, { data: { name: `E2E polygon edges ${Date.now()}` } })).json() as GardenDocument;
-  try {
-    await page.goto(`/gardens/${initial.id}`);
-    const dataUrl = await page.evaluate(() => {
-      const canvas = document.createElement('canvas'); canvas.width = 1000; canvas.height = 750;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#a3af93'; ctx.fillRect(0, 0, 1000, 750);
-      ctx.fillStyle = '#d9d6c8'; ctx.fillRect(500, 80, 350, 250);
-      ctx.fillStyle = '#68765b'; ctx.fillRect(60, 70, 100, 610);
-      ctx.fillStyle = '#e6e1d2'; ctx.font = '22px sans-serif'; ctx.fillText('POLYGON / SYNTHETIC IMAGE', 200, 80);
-      return canvas.toDataURL('image/png');
-    });
-    const photo = { dataUrl, imageWidth: 1000, imageHeight: 750, boundary,
-      corners: [{ x: .2, y: .8 }, { x: .8, y: .8 }, { x: .8, y: .2 }, { x: .2, y: .2 }] };
-    expect((await request.put(`${api}/gardens/${initial.id}`, { data: { ...initial, photo } })).status()).toBe(200);
-    await page.reload();
-    await expect(page.getByTestId('photo-edge-5')).toBeVisible();
-    await expect(page.locator('#properties-panel').getByText('土台の辺の長さ')).toHaveCount(0);
-    // An edge beyond the original mapping rectangle must remain editable in metres.
-    await page.getByTestId('photo-edge-0').click();
-    await expect(page.getByRole('dialog', { name: '選択した辺の長さ' })).toBeVisible();
-    await page.getByLabel('長さ (m)', { exact: true }).fill('12');
-    await page.getByRole('button', { name: '長さを適用' }).click();
-    await page.getByTestId('photo-edge-0').click();
-    await expect(page.getByLabel('長さ (m)', { exact: true })).toHaveValue('12.00');
-    await page.getByRole('button', { name: '辺の編集を閉じる' }).click();
-    await page.getByTestId('photo-edge-5').click();
-    await page.getByLabel('長さ (m)', { exact: true }).fill('6');
-    await page.getByRole('button', { name: '長さを適用' }).click();
-    await page.getByTestId('save-garden').click();
-    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
-    const saved = await (await request.get(`${api}/gardens/${initial.id}`)).json() as GardenDocument;
-    expect(saved.photo!.boundary).toHaveLength(6);
-    expect(saved.photo!.projectionSize).toEqual({ width: 10, depth: 8 });
-    expect(saved.width).toBeCloseTo(14, 2);
-    expect(saved.photo!.boundary[1].x).toBeCloseTo(.92, 5);
-    expect(saved.photo!.boundary[0].y).toBeCloseTo(.65, 5);
-    expect(saved.photo!.boundary.slice(2)).toEqual(boundary.slice(2));
-    await page.reload();
-    await page.getByTestId('photo-edge-5').click();
-    await expect(page.getByLabel('長さ (m)', { exact: true })).toHaveValue('6.00');
-    await page.getByLabel('長さ (m)', { exact: true }).fill('70');
-    await expect(page.getByRole('button', { name: '長さを適用' })).toBeDisabled();
-    await expect(page.getByRole('alert')).toContainText('写真の外');
-    await page.getByRole('button', { name: '取消', exact: true }).click();
-    await page.getByTestId('photo-edge-2').click();
-    await page.getByLabel('長さ (m)', { exact: true }).fill('11');
-    await expect(page.getByRole('alert')).toContainText('交差');
-    await expect(page.getByRole('button', { name: '長さを適用' })).toBeDisabled();
-    await page.getByRole('button', { name: '取消', exact: true }).click();
-    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
-    expect(await (await request.get(`${api}/gardens/${initial.id}`)).json()).toEqual(saved);
-    await page.getByTestId('photo-edge-4').click();
-    await page.screenshot({ path: resolve(directory, 'polygon-edge-editor.png'), fullPage: true });
-    await writeFile(resolve(directory, 'polygon-edges.json'), JSON.stringify(saved, null, 2));
-    await page.setViewportSize({ width: 1024, height: 768 });
-    const popup = page.getByRole('dialog', { name: '選択した辺の長さ' });
-    await expect.poll(async () => {
-      const box = (await popup.boundingBox())!, stage = (await page.locator('.photo-stage-shell').boundingBox())!;
-      return box.x >= stage.x && box.y >= stage.y && box.x + box.width <= stage.x + stage.width && box.y + box.height <= stage.y + stage.height;
-    }).toBe(true);
-    await page.screenshot({ path: resolve(directory, 'workspace-edge-1024.png'), fullPage: true });
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('photo-edge-4')).toBeFocused();
-    await expect(popup).toHaveCount(0);
-    const camera = page.getByRole('button', { name: '写真のカメラを設定' });
-    await camera.click();
-    await expect(page.getByRole('dialog', { name: '写真のカメラを合わせる' })).toBeVisible();
-    await page.getByLabel('基準の幅（m）').fill('3');
-    await page.screenshot({ path: resolve(directory, 'workspace-camera-dialog.png'), fullPage: true });
-    await page.keyboard.press('Escape');
-    await expect(camera).toBeFocused();
-    await expect(page.getByTestId('save-status')).toHaveText('保存済み');
-    expect(await (await request.get(`${api}/gardens/${initial.id}`)).json()).toEqual(saved);
-    await page.setViewportSize({ width: 1440, height: 960 });
-    await page.getByRole('button', { name: '3D庭', exact: true }).click();
-    await expect(page.getByTestId('garden-canvas')).toBeVisible();
-    await page.screenshot({ path: resolve(directory, 'polygon-edges-3d.png'), fullPage: true });
-  } finally { expect((await request.delete(`${api}/gardens/${initial.id}`)).status()).toBe(204); }
-});
+for (const fixedProjection of [false, true]) {
+  const mode = fixedProjection ? 'fixed-projection' : 'legacy';
+  test('R. 6辺の計測・閉じ辺・輪郭固定・保存復元 (' + mode + ')', async ({ page, request }) => {
+    await mkdir(directory, { recursive: true });
+    const initial = await (await request.post(api + '/gardens', { data: { name: 'E2E edge measurement ' + mode + ' ' + Date.now() } })).json() as GardenDocument;
+    try {
+      await page.goto('/gardens/' + initial.id);
+      const dataUrl = await page.evaluate(() => {
+        const canvas = document.createElement('canvas'); canvas.width = 1000; canvas.height = 750;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#a3af93'; ctx.fillRect(0, 0, 1000, 750);
+        ctx.fillStyle = '#d9d6c8'; ctx.fillRect(500, 80, 350, 250);
+        ctx.fillStyle = '#68765b'; ctx.fillRect(60, 70, 100, 610);
+        ctx.fillStyle = '#e6e1d2'; ctx.font = '22px sans-serif'; ctx.fillText('POLYGON / SYNTHETIC IMAGE', 200, 80);
+        return canvas.toDataURL('image/png');
+      });
+      const photo = { dataUrl, imageWidth: 1000, imageHeight: 750, boundary,
+        corners: [{ x: .2, y: .8 }, { x: .8, y: .8 }, { x: .8, y: .2 }, { x: .2, y: .2 }],
+        ...(fixedProjection ? { projectionSize: { width: 10, depth: 8 } } : {}) };
+      const response = await request.put(api + '/gardens/' + initial.id, {
+        data: { ...initial, width: fixedProjection ? 14 : 10, depth: fixedProjection ? 12 : 8, photo },
+      });
+      expect(response.status()).toBe(200);
+      const saved = await response.json() as GardenDocument;
+      await page.reload();
+      await expect(page.getByTestId('photo-edge-5')).toBeVisible();
+      const outline = await page.getByTestId('photo-ground').getAttribute('points');
+      const vertices = await page.locator('[data-testid^="photo-vertex-"]').evaluateAll((elements) =>
+        elements.map((element) => [element.getAttribute('cx'), element.getAttribute('cy')]));
+      const popup = page.getByRole('dialog', { name: '選択した辺の長さ' });
+      for (const [index, length] of lengths.entries()) {
+        const edge = page.getByTestId('photo-edge-' + index);
+        if (index % 2 === 0) await edge.click();
+        else { await edge.focus(); await page.keyboard.press(index === 5 ? 'Space' : 'Enter'); }
+        await expect(popup).toBeVisible();
+        await expect(page.getByTestId('edge-measurement')).toHaveText(length.toFixed(2) + ' m');
+        await expect(popup).toContainText('現在の概算');
+        await expect(popup.locator('input')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: '長さを適用' })).toHaveCount(0);
+        await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+        await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+        await expect(page.getByTestId('save-garden')).toBeDisabled();
+        if (index % 2 === 0) await page.keyboard.press('Escape');
+        else await popup.getByRole('button', { name: '辺の計測を閉じる' }).click();
+        await expect(edge).toBeFocused();
+      }
+      expect(await page.locator('[data-testid^="photo-vertex-"]').evaluateAll((elements) =>
+        elements.map((element) => [element.getAttribute('cx'), element.getAttribute('cy')]))).toEqual(vertices);
+      expect(await (await request.get(api + '/gardens/' + initial.id)).json()).toEqual(saved);
+      await page.getByTestId('photo-edge-4').click();
+      await page.screenshot({ path: resolve(directory, 'polygon-edge-measurement-' + mode + '.png'), fullPage: true });
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await expect.poll(async () => {
+        const box = (await popup.boundingBox())!, stage = (await page.locator('.photo-stage-shell').boundingBox())!;
+        return box.x >= stage.x && box.y >= stage.y && box.x + box.width <= stage.x + stage.width && box.y + box.height <= stage.y + stage.height;
+      }).toBe(true);
+      await page.screenshot({ path: resolve(directory, 'edge-measurement-1024-' + mode + '.png'), fullPage: true });
+      await popup.getByRole('button', { name: '閉じる', exact: true }).click();
+      await expect(page.getByTestId('photo-edge-4')).toBeFocused();
+      const camera = page.getByRole('button', { name: '写真のカメラを設定' });
+      await camera.click();
+      await page.getByLabel('基準の幅（m）').fill('3');
+      await page.keyboard.press('Escape');
+      await expect(camera).toBeFocused();
+      await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+      await expect(page.getByTestId('save-status')).toHaveText('保存済み');
+      await page.setViewportSize({ width: 1440, height: 960 });
+      await page.getByRole('button', { name: '3D庭', exact: true }).click();
+      await expect(page.getByTestId('garden-canvas')).toBeVisible();
+      await page.getByRole('button', { name: '写真＋設計', exact: true }).click();
+      await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+      await page.reload();
+      await page.getByTestId('photo-edge-5').click();
+      await expect(page.getByTestId('edge-measurement')).toHaveText('8.00 m');
+      await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
+      expect(await (await request.get(api + '/gardens/' + initial.id)).json()).toEqual(saved);
+      await page.screenshot({ path: resolve(directory, 'edge-measurement-reloaded-' + mode + '.png'), fullPage: true });
+      await writeFile(resolve(directory, 'edge-measurement-' + mode + '.json'), JSON.stringify(saved, null, 2));
+    } finally { expect((await request.delete(api + '/gardens/' + initial.id)).status()).toBe(204); }
+  });
+}
