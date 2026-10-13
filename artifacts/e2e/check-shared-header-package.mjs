@@ -15,7 +15,7 @@ try {
   const metrics=[];
   for (const app of ['ec','canvas']) {
    await page.goto(app==='ec'?'http://127.0.0.1:5186/':'http://127.0.0.1:5173/gardens/35f733b6-1944-482f-824e-cefc33ea7d8e');
-   await expect(page.locator('.kusakari-site-chrome')).toHaveAttribute('data-header-version','0.1.3');
+   await expect(page.locator('.kusakari-site-chrome')).toHaveAttribute('data-header-version','0.1.4');
    await page.evaluate(()=>document.fonts.ready);
    const chrome=page.locator('.kusakari-site-chrome');
    await expect(chrome.locator('.announcement')).toContainText('ひと鉢からはじまる、緑のある暮らし。');

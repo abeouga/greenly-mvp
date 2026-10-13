@@ -28,8 +28,15 @@
 .garden-card-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
 .garden-card-copy span { font-size: 11px; color: #8f9e81; }
 .garden-card-copy span:last-child { margin-top: 9px; font-size: 10px; color: #a3b098; }
-.delete-garden { position: absolute; right: 12px; top: 12px; color: #aab5a1; }
-.delete-garden:hover { color: var(--danger); background: #fbf1ed; }
+.garden-options { position: absolute; right: 10px; top: 10px; }
+.garden-options-trigger { width: 44px; height: 44px; color: #758b72; }
+.garden-options-trigger:hover, .garden-options-trigger[aria-expanded="true"] { background: #eff4e9; color: #244c3c; }
+.garden-options-panel { position: absolute; right: 0; top: calc(100% + 5px); z-index: 10; width: 164px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: white; box-shadow: 0 8px 24px #263d3224; }
+.garden-options-panel button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 6px; font: inherit; color: #244c3c; background: transparent; text-align: left; cursor: pointer; }
+.garden-options-panel button:hover { background: #eff4e9; }
+.garden-options-panel .garden-options-delete { color: var(--danger); }
+.garden-options-panel .garden-options-delete:hover { background: #fbf1ed; }
+.garden-options button:focus-visible { outline: 2px solid #365d3d; outline-offset: 2px; }
 .empty-message { padding: 48px 24px; border: 1px dashed #d7e2ca; border-radius: 8px; text-align: center; color: #8ea07e; font-size: 12px; }
 .empty-message .button { margin-top: 12px; }
 .page-footer { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 22px 0; border-top: 1px solid var(--line); color: #8d9e7e; font-size: 11px; }

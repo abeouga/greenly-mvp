@@ -24,7 +24,7 @@ test('Q. 名前だけで作成・土台寸法を編集・縮小検証・MySQL保
     await page.getByLabel('奥行き (m)', { exact: true }).fill('12');
     await page.getByRole('button', { name: '土台に適用' }).click();
     await expect(page.getByRole('img', { name: '現在の土台：幅14m、奥行き12m' })).toBeVisible();
-    await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+    await expect(page.getByTestId('save-garden')).toBeEnabled();
     const initial = await (await request.get(`${api}/gardens/${id}`)).json() as GardenDocument;
     expect([initial.width, initial.depth]).toEqual([10, 8]);
     await page.getByRole('button', { name: '土台設定を閉じる' }).click();
@@ -34,11 +34,12 @@ test('Q. 名前だけで作成・土台寸法を編集・縮小検証・MySQL保
     if (!box) throw new Error('3D庭が表示されていません。');
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(page.getByTestId('object-row-0')).toBeVisible();
+    if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
     await page.getByTestId('position-x').fill('6');
     await page.getByRole('button', { name: '土台設定', exact: true }).click();
     await page.getByLabel('幅 (m)', { exact: true }).fill('10');
     await page.getByRole('button', { name: '土台に適用' }).click();
-    await expect(page.getByRole('alert')).toContainText('配置済みの物体が土台の外');
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('配置済みの物体が土台の外');
     await expect(page.getByRole('img', { name: '現在の土台：幅14m、奥行き12m' })).toBeVisible();
     await page.getByRole('button', { name: '入力を戻す' }).click();
     await page.getByRole('button', { name: '土台設定を閉じる' }).click();

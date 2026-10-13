@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "id": "e4d249b3-a3e6-460a-8197-2dad3c3ed19e",
+  "id": "f2f91662-55f1-4143-bcea-75030ee1035a",
   "revision": 1,
-  "name": "E2E dimensions 1791714493056",
+  "name": "E2E dimensions 1791857244513",
   "width": 14,
   "depth": 12,
   "objects": [
     {
-      "id": "b1fd94a9-a0cf-423d-aa5f-233f98ad1329",
+      "id": "295ee088-4585-4a1d-8980-e5c4db9269ad",
       "assetId": "tree_oak",
       "position": {
         "x": 6,

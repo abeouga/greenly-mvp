@@ -74,7 +74,9 @@ test('A. 庭作成からGLB配置・変形・保存・再読み込みまで', as
     return Math.abs(currentX - initialX) + Math.abs(currentZ - initialZ);
   }).toBeGreaterThan(0.1);
 
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('rotation-y').fill('30');
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('uniform-scale').fill('1.25');
   await expect(page.getByTestId('rotation-y')).toHaveValue('30');
   await expect(page.getByTestId('uniform-scale')).toHaveValue('1.25');
@@ -113,14 +115,16 @@ test('A. 庭作成からGLB配置・変形・保存・再読み込みまで', as
 
   await page.getByRole('button', { name: '← 庭一覧' }).click();
   await page.waitForURL('/');
-  const deleteButton = card.getByRole('button', { name: `${name}を削除` });
+  const deleteButton = card.getByRole('button', { name: `${name}のオプション` });
   await deleteButton.click();
+  await card.getByRole('button', { name: '削除', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'この庭を削除しますか？' })).toContainText(name);
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await expect(card.locator('.garden-card-open')).toBeVisible();
   expect((await request.get(`${apiBase}/gardens/${id}`)).status()).toBe(200);
 
   await deleteButton.click();
+  await card.getByRole('button', { name: '削除', exact: true }).click();
   await page.getByRole('button', { name: '庭を削除', exact: true }).click();
   await expect(card).toHaveCount(0);
   expect((await request.get(`${apiBase}/gardens/${id}`)).status()).toBe(404);
@@ -147,20 +151,24 @@ test('B. 同一GLBの配置、独立移動、複製、削除', async ({ page, re
   const secondPositionBefore = structuredClone(original.objects.find((object) => object.id === secondId)?.position);
   if (!secondPositionBefore) throw new Error('2個目の保存位置を取得できませんでした。');
   await page.getByTestId('object-row-0').click();
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('position-x').fill('-1.5');
   await expect(page.getByTestId('position-x')).toHaveValue('-1.5');
 
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByRole('button', { name: '複製' }).click();
   await expect(page.getByTestId('object-row-2')).toBeVisible();
   const duplicateId = await page.getByTestId('object-row-2').getAttribute('data-object-id');
   expect(duplicateId).toBeTruthy();
   expect(originalIds).not.toContain(duplicateId);
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('position-x').fill('2.5');
   await page.getByTestId('object-row-0').click();
   await expect(page.getByTestId('position-x')).toHaveValue('-1.5');
   await page.getByTestId('object-row-1').click();
   await expect(page.getByTestId('position-x')).toHaveValue(String(Number(secondPositionBefore.x.toFixed(2))));
   await page.getByTestId('object-row-2').click();
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByRole('button', { name: '削除' }).click();
   await expect(page.getByTestId('object-row-2')).toHaveCount(0);
   await page.getByTestId('save-garden').click();
@@ -195,14 +203,15 @@ test('C. 不正な寸法と配置位置を拒否し既存庭を維持', async ({
 test('D. 保存失敗後の編集保持と再試行', async ({ page, request }) => {
   const id = await createGarden(page, `E2E retry ${Date.now()}`);
   await placeTree(page);
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('position-x').fill('1.2');
   await page.route(`**/api/gardens/${id}`, async (route) => {
     if (route.request().method() === 'PUT') await route.abort('failed');
     else await route.continue();
   });
   await page.getByTestId('save-garden').click();
-  await expect(page.getByRole('alert')).toContainText('サーバーへ接続できませんでした');
-  await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+  await expect(page.locator('.editor-alert[role="alert"]')).toContainText('サーバーへ接続できませんでした');
+  await expect(page.getByTestId('save-garden')).toBeEnabled();
   await expect(page.getByTestId('position-x')).toHaveValue('1.2');
   expect((await gardenJson(request, id)).revision).toBe(0);
   await page.unroute(`**/api/gardens/${id}`);
@@ -217,6 +226,7 @@ test('E. 古いrevisionの保存を競合として拒否しローカル編集を
   await page.getByTestId('save-garden').click();
   await expect(page.getByTestId('save-status')).toHaveText('保存済み');
 
+  if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
   await page.getByTestId('position-x').fill('2');
   const serverDocument = await gardenJson(request, id);
   const competingDocument = structuredClone(serverDocument);
@@ -225,8 +235,8 @@ test('E. 古いrevisionの保存を競合として拒否しローカル編集を
   expect(competingSave.ok()).toBeTruthy();
 
   await page.getByTestId('save-garden').click();
-  await expect(page.getByRole('alert')).toContainText('別の保存結果と競合しました');
-  await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+  await expect(page.locator('.editor-alert[role="alert"]')).toContainText('別の保存結果と競合しました');
+  await expect(page.getByTestId('save-garden')).toBeEnabled();
   await expect(page.getByTestId('position-x')).toHaveValue('2');
   const serverAfterConflict = await gardenJson(request, id);
   expect(serverAfterConflict.revision).toBe(serverDocument.revision + 1);
@@ -241,11 +251,12 @@ test('F. 4種類のGLBを配置して保存・再読み込み', async ({ page, r
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('3Dキャンバスが表示されていません。');
 
+  // 庭はCanvas全体より小さく投影されるため、中央の庭面内をクリックします。
   const placements = [
-    { assetId: 'tree_oak', x: 0.32, y: 0.35 },
-    { assetId: 'shrub_boxwood', x: 0.68, y: 0.35 },
-    { assetId: 'brick_paver', x: 0.5, y: 0.68 },
-    { assetId: 'bench_wood', x: 0.5, y: 0.35 },
+    { assetId: 'tree_oak', x: 0.44, y: 0.45 },
+    { assetId: 'shrub_boxwood', x: 0.56, y: 0.45 },
+    { assetId: 'brick_paver', x: 0.5, y: 0.60 },
+    { assetId: 'bench_wood', x: 0.44, y: 0.65 },
   ];
   for (const [index, placement] of placements.entries()) {
     await page.getByTestId(`asset-${placement.assetId}`).click();
@@ -277,13 +288,13 @@ test('G. GLB読み込み失敗後に再試行して復旧', async ({ page, reque
   if (!bounds) throw new Error('3Dキャンバスが表示されていません。');
   await page.mouse.click(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
   await expect(page.getByTestId('object-row-0')).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('モデルを読み込めません');
+  await expect(page.locator('.editor-alert[role="alert"]')).toContainText('モデルを読み込めません');
   await expect(page.getByRole('button', { name: 'モデルを再試行' })).toBeVisible();
 
   await page.unroute('**/models/tree-oak.glb');
   await page.getByRole('button', { name: 'モデルを再試行' }).click();
   await expect(page.getByTestId('model-loaded')).toHaveText('読み込み済み: 1 / 1');
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.editor-alert[role="alert"]')).toHaveCount(0);
   await page.getByTestId('save-garden').click();
   await expect(page.getByTestId('save-status')).toHaveText('保存済み');
   const stored = await saveGardenArtifact(request, id, 'garden-model-retry.json');
@@ -334,7 +345,7 @@ test('H. 回転リングのドラッグを保存して再読み込みできる',
   await expect(page.getByTestId('tool-rotate')).toBeEnabled();
   const degrees = Number(await page.getByTestId('rotation-y').inputValue());
   expect(degrees).toBeCloseTo(450, 0);
-  await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+  await expect(page.getByTestId('save-garden')).toBeEnabled();
   await expect(page.getByTestId('object-row-1')).toHaveCount(0);
   expect((await gardenJson(request, id)).objects).toHaveLength(0);
   await page.getByTestId('save-garden').click();

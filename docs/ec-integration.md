@@ -17,3 +17,18 @@ Consequences: ECとCanvasを両方起動してください。通常は5186/5173�
 全要件の対応表は隣接ECプロジェクトのdocs/functional-requirements.mdにあります。
 
 2026-10-11: ECのファビコン画像（kusakari_ico.png）をタブとヘッダーに使用します。ECとCanvasのロゴ画像を統一します。768px以下では庭一覧・編集画面を縦に並べます。
+
+
+## 2026-10-13: Canvas内の商品候補・カート
+
+Context: 庭を編集中に候補商品を選び、同じECカートを操作できるようにする。
+
+Decision: Canvasは `VITE_KUSAKARI_EC_URL` の `/api/cart`、`/api/materials/quote`、`/api/cart/items/{productId}` にcredentials=includeで接続する。受取店舗はECカートのstoreIdを使用する。素材の種類・個数・店舗を候補クエリのキーにし、座標・回転・倍率の変更では再取得しない。未対応素材や99個超過は素材ごとに表示する。追加は現数量への加算、更新は指定数量、削除は0としてrevision付きで送る。更新競合・通信失敗では最新カートを取得し、操作を自動再送しない。
+
+共通ヘッダーと右サイドバーは同じTanStack Queryキャッシュを参照する。タブ切替・ウィンドウへの復帰でECカートを再取得する。庭の配置変更からカートを自動更新しない。商品価格・在庫・カートはECの正本を使用し、Canvas DBには保存しない。
+
+ECの許可Originは `KUSAKARI_EC_CANVAS_ORIGIN`（通常http://127.0.0.1:5173、統合E2Eでは15173）で設定する。EC ViteはAPIのCORS処理をバックエンドへ委ねる。ローカルでは同一ホスト127.0.0.1・異なるポートでHttpOnly/SameSite=Strict/path=/apiの既存Cookieを共有する。localhostと127.0.0.1を混在させない。公開環境では既定の同一サイト構成に合わせてOrigin・Cookieを構成する。
+
+Alternatives: Canvas専用カートの作成やCookieをJavaScriptでコピーする方法は採用しない。
+
+Consequences: EC停止時も庭編集・保存・配置物選択を継続でき、サイドバーで再試行できる。注文手続きとヘッダーの「ECでカートを確認」は未保存確認を経由してEC /cartへ移動する。

@@ -8,7 +8,7 @@ import { RotationRing } from './RotationRing';
 import { GardenGround } from './GardenGround';
 import { BrokenObject, GardenModel, SelectionOutline } from './GardenModel';
 import { detectWebgl } from './webgl';
-export function GardenCanvas({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed }) {
+export function GardenCanvas({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed, editorOverlay }) {
     const webglSupported = useMemo(() => detectWebgl(), []);
     const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
     if (!webglSupported) {
@@ -31,6 +31,7 @@ export function GardenCanvas({ document, assets, selectedAssetId, disabled, retr
             return (<PlacedObject key={`${object.id}:${retry}`} object={object} asset={asset} disabled={disabled} onModelLoaded={onModelLoaded} onModelFailed={onModelFailed}/>);
         })}
       </Canvas>
+      {editorOverlay}
       <div className="canvas-corner-label" aria-hidden="true">N</div>
     </div>);
 }

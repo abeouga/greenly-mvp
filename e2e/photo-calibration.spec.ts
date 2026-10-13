@@ -159,9 +159,10 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     await page.screenshot({ path: resolve(artifacts, 'camera-calibrated-measurement.png'), fullPage: true });
     await writeFile(resolve(artifacts, 'camera-calibrated-measurement.json'), JSON.stringify(edited, null, 2));
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '数量・施工範囲', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: '配置数量・施工範囲' })).toContainText('m²');
-    await page.getByRole('dialog').getByRole('button', { name: '閉じる', exact: true }).click();
+    await page.getByTestId('object-details-toggle').click();
+    await page.locator('.construction-details > summary').click();
+    await expect(page.locator('.construction-details')).toContainText('m²');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '完成イメージを確認', exact: true }).click();
     const completionImage = page.getByAltText('現在の庭の完成イメージ');
     await expect(completionImage).toBeVisible();

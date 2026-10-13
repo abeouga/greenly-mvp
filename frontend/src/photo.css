@@ -7,8 +7,6 @@
 .photo-display-controls label { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #65775c; }
 .photo-display-controls input { width: 12px; height: 12px; }
 .photo-guidance { display: flex; align-items: center; gap: 12px; min-height: 33px; padding: 5px 20px; background: #f4f6ef; color: #687b5b; font-size: 11px; border-bottom: 1px solid #e1e7dc; flex-shrink: 0; }
-.camera-state { color: #9b7b3f; white-space: nowrap; padding-right: 12px; border-right: 1px solid #dce3d5; }
-.camera-state.is-calibrated { color: #5e7f55; }
 .photo-guidance.is-drawing { background: #f7f1e4; color: #896c38; }
 .drawing-count { font-weight: 600; }
 .photo-workspace > .notice-error { padding: 7px 20px; background: #fdf5ee; flex-shrink: 0; }

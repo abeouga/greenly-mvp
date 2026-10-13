@@ -85,7 +85,7 @@ for (const mode of ['legacy', 'fixed-projection', 'calibrated']) {
       await field.fill('12.5');
       await field.press('Enter');
       await expect(page.getByTestId('edge-measurement')).toHaveText('12.50 m');
-      await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
+      await expect(page.getByTestId('save-garden')).toBeEnabled();
       await expect(popup).toBeVisible();
       await page.keyboard.press('Escape');
       await page.getByTestId('photo-edge-1').click();
@@ -94,11 +94,12 @@ for (const mode of ['legacy', 'fixed-projection', 'calibrated']) {
       await field.fill(String(secondLength * 1.5));
       await field.press('Enter');
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: '数量・施工範囲', exact: true }).click();
-      const summary = page.getByRole('dialog', { name: '配置数量・施工範囲' });
+      await page.getByTestId('object-details-toggle').click();
+      await page.locator('.construction-details > summary').click();
+      const summary = page.locator('.construction-details');
       const expectedArea = mode === 'calibrated' ? 180 : 142.5;
       await expect(summary).toContainText(`面積：${expectedArea.toFixed(2)} m²`);
-      await summary.getByRole('button', { name: '閉じる', exact: true }).click();
+      await page.keyboard.press('Escape');
       await page.getByTestId('save-garden').click();
       await expect(page.getByTestId('save-status')).toHaveText('保存済み');
       const after = await (await request.get(`${api}/gardens/${initial.id}`)).json() as GardenDocument;

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "./Dialog";
 import { useEditorStore } from "../stores/editorStore";
-import { placementRows, shoppingUrl, ecUrl } from "../domain/shopping";
-import { groundSummary } from "../domain/gardenSummary";
+import { placementRows, shoppingUrl } from "../domain/shopping";
 import { captureImage } from "../domain/captureImage";
 
 export function PlanTools({
@@ -23,9 +22,7 @@ export function PlanTools({
   const [suggested, setSuggested] = useState(false);
   const [image, setImage] = useState("");
   const [capturing, setCapturing] = useState(false);
-  const editError = useEditorStore((state) => state.editError);
   const rows = placementRows(document, assets);
-  const summary = groundSummary(document);
   function leave(url) {
     const state = useEditorStore.getState();
     if (
@@ -79,28 +76,19 @@ export function PlanTools({
     }
   }
   let plant = "コナラ・ボックスウッド";
-  let reason = "日なたで緑を楽しむ庭のサンプル候補です。";
+  let reason = "日なたで緑を楽しむ庭の候補です。";
   if (light !== "日なた") {
     plant = "アオキ・ヤブラン";
-    reason = "半日陰・日陰向けのサンプル候補です。";
+    reason = "半日陰・日陰向けの候補です。";
   }
   if (purpose === "花を楽しむ" && light === "日なた") {
     plant = "ラベンダー・ローズマリー";
-    reason = "花と香りを楽しむサンプル候補です。";
+    reason = "花と香りを楽しむ候補です。";
   }
   if (care === "少なめ") reason += " 手入れ量を抑える候補を優先しています。";
   return (
     <>
-      <div className="plan-actions">
-        <button
-          onClick={() => {
-            setOpen("quantity");
-            setError("");
-          }}
-          disabled={disabled}
-        >
-          数量・施工範囲
-        </button>
+      <div className="plan-actions" role="group" aria-label="庭の計画と購入">
         <button
           onClick={() => {
             setOpen("design");
@@ -120,69 +108,14 @@ export function PlanTools({
         >
           配置したものから商品を探す
         </button>
-        <button onClick={() => leave(ecUrl)} disabled={disabled}>
-          ECへ戻る
-        </button>
       </div>
       {error && (
-        <p className="notice notice-error" role="alert">
+        <p className="notice notice-error plan-feedback" role="alert">
           {error}
         </p>
       )}
-      {open === "quantity" && (
-        <Dialog title="配置数量・施工範囲" onClose={() => setOpen("")}>
-          <p>{summary.label}</p>
-          <p>
-            面積：{summary.area?.toFixed(2) ?? "—"} m² / 外周：
-            {summary.perimeter?.toFixed(2) ?? "—"} m
-          </p>
-          {rows.length === 0 && <p>配置したものはありません。</p>}
-          {rows.map((row) => (
-            <div key={row.assetId} className="plan-quantity-row">
-              <span>
-                {row.name}
-                <small className="plan-footprint">
-                  モデル底面の合計 {row.footprint.toFixed(2)} m²（重なりを含む）
-                </small>
-                {!row.materialCode && "（対応商品なし）"}
-              </span>
-              <label>
-                配置個数
-                <input
-                  aria-label={`${row.name}の配置個数`}
-                  type="number"
-                  min="0"
-                  max="200"
-                  step="1"
-                  value={row.quantity}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    useEditorStore
-                      .getState()
-                      .setAssetQuantity(row.assetId, Number(event.target.value))
-                  }
-                />
-              </label>
-            </div>
-          ))}
-          {editError && (
-            <p className="notice-error" role="alert">
-              {editError}
-            </p>
-          )}
-          <p className="form-hint">
-            数量は庭の配置に反映されます。追加分は元の配置の近くに複製します。保存で確定します。
-          </p>
-          <button onClick={shop} disabled={disabled || rows.length === 0}>
-            この数量で商品を探す
-          </button>
-        </Dialog>
-      )}
       {open === "design" && (
         <Dialog title="条件に合う植物候補" onClose={() => setOpen("")}>
-          <p className="plan-mock-note">
-            AI提案の画面モックです。外部AIは使用せず、条件別サンプルを表示します。
-          </p>
           <form
             className="plan-form"
             onSubmit={(event) => {

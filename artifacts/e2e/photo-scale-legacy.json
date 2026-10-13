@@ -1,14 +1,14 @@
 {
   "before": {
     "schemaVersion": 1,
-    "id": "942b8f35-4de9-4841-b30a-9653d0fed553",
+    "id": "135f35ee-2ab7-429a-a66f-b28683d8a28a",
     "revision": 1,
-    "name": "辺の実寸編集 legacy 1791714667166",
+    "name": "辺の実寸編集 legacy 1791857924855",
     "width": 10,
     "depth": 8,
     "objects": [
       {
-        "id": "d3d8368e-248c-420f-9b58-dd872f88e88f",
+        "id": "7e25e730-5c16-4068-aae8-9f1542f00ab7",
         "assetId": "tree_oak",
         "position": {
           "x": -1,
@@ -79,14 +79,14 @@
   },
   "after": {
     "schemaVersion": 1,
-    "id": "942b8f35-4de9-4841-b30a-9653d0fed553",
+    "id": "135f35ee-2ab7-429a-a66f-b28683d8a28a",
     "revision": 2,
-    "name": "辺の実寸編集 legacy 1791714667166",
+    "name": "辺の実寸編集 legacy 1791857924855",
     "width": 15.000000000000002,
     "depth": 12.000000000000002,
     "objects": [
       {
-        "id": "d3d8368e-248c-420f-9b58-dd872f88e88f",
+        "id": "7e25e730-5c16-4068-aae8-9f1542f00ab7",
         "assetId": "tree_oak",
         "position": {
           "x": -1.5000000000000002,

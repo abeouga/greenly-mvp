@@ -7,7 +7,7 @@ import { calibratedBoundaryError, projectionCorners } from '../domain/calibrated
 import { PhotoEdges } from './PhotoEdges';
 import { EdgeMeasurementPopover } from './EdgeMeasurementPopover';
 import { UiIcon } from './UiIcon';
-export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed }) {
+export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed, editorOverlay }) {
     const svg = useRef(null);
     const fileInput = useRef(null);
     const cameraButton = useRef(null);
@@ -179,6 +179,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
     </div>}
     {error && <p role="alert" className="notice-error">{error}</p>}
     {calibrationError && <p role="alert" className="notice-error">{calibrationError}</p>}
+    {!photo && editorOverlay}
     {!photo ? <button type="button" className="photo-empty" disabled={disabled} onClick={() => fileInput.current?.click()}>
       <span className="upload-symbol"><UiIcon name="photo" size={32}/></span>
       <strong>庭の写真から設計する</strong>
@@ -186,11 +187,11 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
       <span className="photo-empty-hint">クリックして選択、またはここにドラッグ＆ドロップ</span>
       <span className="upload-format">JPEG / PNG · 5MBまで</span>
     </button> : <>
-      <div className={`photo-guidance photo-hint${drawingBoundary ? ' is-drawing' : ''}`} aria-live="polite">
-        {drawingBoundary ? <><span className="drawing-count">{draft.length}/64点</span><span>頂点を順にクリック。3点以上で始点につなぐと確定します。</span></>
-                : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを入力 · 頂点をドラッグして輪郭を調整'}</span></>}
-      </div>
+      {drawingBoundary && <div className="photo-guidance photo-hint is-drawing" aria-live="polite">
+        <span className="drawing-count">{draft.length}/64点</span><span>頂点を順にクリック。3点以上で始点につなぐと確定します。</span>
+      </div>}
       <div className="photo-stage-shell">
+      {editorOverlay}
       <svg ref={svg} className="photo-stage" viewBox={`0 0 ${photo.imageWidth} ${photo.imageHeight}`} onClick={onImageClick} onPointerMove={(event) => { if (disabled)
             return; const p = imagePoint(event.clientX, event.clientY); if (!p)
             return; if (dragging !== null)

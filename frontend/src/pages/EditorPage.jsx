@@ -5,7 +5,9 @@ import { gardenApi } from '../api/gardens';
 import { GardenHeader } from '../components/GardenHeader';
 import { SiteHeader } from '../components/SiteHeader';
 import { CatalogPanel } from '../components/CatalogPanel';
-import { PropertiesPanel } from '../components/PropertiesPanel';
+import { ObjectToolbar } from '../components/ObjectToolbar';
+import { CommercePanel } from '../components/CommercePanel';
+import { useCommerce } from '../hooks/useCommerce';
 import { GardenDimensions } from '../components/GardenDimensions';
 import { clearGardenModelCache, GardenCanvas } from '../three/GardenCanvas';
 import { useEditorStore } from '../stores/editorStore';
@@ -27,6 +29,7 @@ export function EditorPage({ gardenId }) {
     const gardenQuery = useQuery({ queryKey: ['garden', gardenId], queryFn: () => gardenApi.getGarden(gardenId), staleTime: Infinity });
     const assetQuery = useQuery({ queryKey: ['assets'], queryFn: gardenApi.listAssets, staleTime: Infinity });
     const document = useEditorStore((state) => state.document);
+    const commerce = useCommerce(document, assetQuery.data ?? []);
     const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
     const selectedAssetId = useEditorStore((state) => state.selectedAssetId);
     const tool = useEditorStore((state) => state.tool);
@@ -172,26 +175,28 @@ export function EditorPage({ gardenId }) {
     const canvasHint = hasBoundaryDraft ? '庭の輪郭をクリックで描き、始点につないで確定'
         : selectedAssetId
             ? `${assetMap.get(selectedAssetId)?.name ?? '素材'}を配置中 · 地面をクリック / Escで終了`
-            : selectedObject && viewMode === 'photo' ? '位置・回転・倍率は右の数値で調整'
+            : selectedObject && viewMode === 'photo' ? '右上の詳細から位置・回転・倍率を調整'
                 : selectedObject && tool === 'rotate'
                     ? '円形ハンドルをドラッグして角度を調整'
                     : 'オブジェクトを選択して編集';
-    const statusText = isSaving ? '保存中…' : isCalibrating ? 'カメラを設定中' : hasBoundaryDraft ? '輪郭を描画中' : isDirty ? '未保存の変更' : '保存済み';
+    const statusText = isSaving ? '保存中…' : isCalibrating ? 'カメラを設定中' : hasBoundaryDraft ? '輪郭を描画中' : saveError ? '再試行して保存' : isDirty ? '保存' : '保存済み';
     const isEditingDisabled = isSaving || isTransformDragging || isCalibrating;
     const photoReady = !hasBoundaryDraft && !isCalibrating && (!document.photo || (validSurface(document.photo) && !calibratedBoundaryError(document.photo, document.width, document.depth)));
+    const editorOverlay = <ObjectToolbar document={document} assets={assets} onNavigate={requestNavigation} selectedObject={selectedObject} selectedAsset={selectedAsset} tool={tool} photoMode={viewMode === 'photo'} disabled={isEditingDisabled || hasBoundaryDraft} onSetTool={setTool} onDuplicate={duplicateSelected} onDelete={deleteSelected}/>;
     return (<div className="editor-shell canvas-shell">
       <SiteHeader onNavigate={requestNavigation} disabled={isSaving || isTransformDragging}/>
       <header className="document-bar">
+        <div className="document-identity">
         <button className="icon-button list-button" aria-label="← 庭一覧" title="庭一覧に戻る" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="back"/><span className="editor-list-label">庭一覧</span></button>
-        <div className="document-title"><h1>{document.name}</h1><span>{document.photo && document.photo.boundary.length >= 3
+        <div className="document-title"><h1 title={document.name}>{document.name}</h1><span>{document.photo && document.photo.boundary.length >= 3
             ? `${document.photo.boundary.length}辺の庭` : `${document.width} × ${document.depth} m`}</span></div>
-        <div className="toolbar-status" aria-live="polite">
-          <span className={`status-dot${isDirty || hasBoundaryDraft ? ' status-dirty' : ''}`}/>
-          <span data-testid="save-status">{statusText}</span>
         </div>
+        <PlanTools document={document} assets={assets} disabled={isEditingDisabled} photoMode={viewMode === 'photo'} canSave={photoReady} onSave={save} onNavigate={(url) => { allowNavigation.current = true; window.location.assign(url); }} />
+        <div className="document-save">
         <button className="button button-primary save-button" data-testid="save-garden" onClick={save} disabled={!isDirty || isSaving || isTransformDragging || !photoReady}>
-          {isSaving ? '保存中…' : saveError ? '再試行して保存' : '保存'}
+          <span data-testid="save-status" aria-live="polite">{statusText}</span>
         </button>
+        </div>
       </header>
 
       {saveError && (<div className="editor-alert notice-error" role="alert">
@@ -208,7 +213,6 @@ export function EditorPage({ gardenId }) {
           {failedModelIds.map((id) => (<button key={id} type="button" onClick={() => retryModel(id)}>モデルを再試行</button>))}
         </div>)}
 
-      <PlanTools document={document} assets={assets} disabled={isEditingDisabled} photoMode={viewMode === 'photo'} canSave={photoReady} onSave={save} onNavigate={(url) => { allowNavigation.current = true; window.location.assign(url); }} />
       <main className={`editor-layout${propertiesCollapsed ? ' inspector-hidden' : ''}`}>
         <section className="canvas-column" aria-label="庭の3D編集エリア">
           <div className="canvas-tools">
@@ -220,20 +224,20 @@ export function EditorPage({ gardenId }) {
               {viewMode === '3d' && !document.photo && <button type="button" aria-haspopup="dialog" onClick={() => setDimensionsOpen(true)} disabled={isEditingDisabled}><UiIcon name="ruler"/>土台設定</button>}
               {viewMode === '3d' && <button type="button" onClick={() => commandCamera('top')} disabled={isEditingDisabled}><UiIcon name="top"/>上から見る</button>}
               {viewMode === '3d' && <button type="button" onClick={() => commandCamera('home')} disabled={isEditingDisabled}><UiIcon name="home"/>初期視点</button>}
-              <button type="button" className="inspector-toggle" aria-label={propertiesCollapsed ? '配置済み・プロパティパネルを表示' : '配置済み・プロパティパネルを隠す'} aria-expanded={!propertiesCollapsed} aria-controls="properties-panel" onClick={() => setPropertiesCollapsed(!propertiesCollapsed)}><UiIcon name="panel"/><span>配置・編集</span></button>
+              <button type="button" className="inspector-toggle" aria-label={propertiesCollapsed ? '商品・カートパネルを表示' : '商品・カートパネルを隠す'} aria-expanded={!propertiesCollapsed} aria-controls="properties-panel" onClick={() => setPropertiesCollapsed(!propertiesCollapsed)}><UiIcon name="panel"/><span>商品・カート</span></button>
             </div>
           </div>
           {dimensionsOpen && viewMode === '3d' && !document.photo && <Dialog title="土台のサイズ" description="庭の中心を基準に、幅と奥行きを変更します。" closeLabel="土台設定を閉じる" onClose={() => setDimensionsOpen(false)}>
             <GardenDimensions key={`${document.id}:${document.width}:${document.depth}`} document={document} disabled={isEditingDisabled || hasBoundaryDraft}/>
           </Dialog>}
-          {viewMode === 'photo' ? <PhotoOverlay document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled} retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed}/> : assetQuery.isLoading ? (<div className="canvas-loading" role="status">アセット一覧を読み込んでいます…</div>) : (<GardenCanvas document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isSaving} retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed}/>)}
+          {viewMode === 'photo' ? <PhotoOverlay document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled} retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed} editorOverlay={editorOverlay}/> : assetQuery.isLoading ? (<div className="canvas-loading" role="status">アセット一覧を読み込んでいます…</div>) : (<GardenCanvas document={document} assets={assets} selectedAssetId={selectedAssetId} disabled={isSaving} retryRequest={retryRequest} onModelLoaded={markModelLoaded} onModelFailed={markModelFailed} editorOverlay={editorOverlay}/>)}
           <div className="canvas-footer">
             <span className="canvas-tool-hint" aria-live="polite">{canvasHint}</span>
             <span data-testid="model-loaded">読み込み済み: {loadedModelIds.length} / {document.objects.length}</span>
             <span>1目盛り = 1m</span>
           </div>
         </section>
-        {!propertiesCollapsed && <PropertiesPanel document={document} assets={assets} selectedObject={selectedObject} selectedAsset={selectedAsset} tool={tool} photoMode={viewMode === 'photo'} disabled={isEditingDisabled} collapsed={propertiesCollapsed} onSelectObject={selectObject} onSetTool={setTool} onDuplicate={duplicateSelected} onDelete={deleteSelected} onToggle={() => setPropertiesCollapsed((collapsed) => !collapsed)}/>}
+        {!propertiesCollapsed && <CommercePanel document={document} assets={assets} selectedObject={selectedObject} disabled={isEditingDisabled || hasBoundaryDraft} commerce={commerce} onSelectObject={selectObject} onNavigate={requestNavigation}/>}
         <CatalogPanel assets={assets} selectedAssetId={selectedAssetId} disabled={isEditingDisabled || hasBoundaryDraft || assetQuery.isError} collapsed={catalogCollapsed} onSelect={selectAsset} onToggle={() => setCatalogCollapsed((collapsed) => !collapsed)}/>
       </main>
       {leaveOpen && <Dialog title="変更を保存せずに戻りますか？" description="保存していない編集内容は破棄されます。" onClose={() => setLeaveOpen(false)} footer={<>

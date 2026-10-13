@@ -16,13 +16,13 @@ test('S. 作業面・独立開閉・ダイアログのフォーカス・未保�
     await expect(page.getByTestId('asset-tree_oak')).toBeHidden();
     await expect(page.locator('#properties-panel')).toBeVisible();
     await expect.poll(async () => (await canvas.boundingBox())!.height).toBeGreaterThan(initialBox.height);
-    await page.getByRole('button', { name: '配置済み・プロパティパネルを隠す', exact: true }).click();
+    await page.getByRole('button', { name: '商品・カートパネルを隠す', exact: true }).click();
     await expect(page.locator('#properties-panel')).toHaveCount(0);
     await expect.poll(async () => (await canvas.boundingBox())!.width).toBeGreaterThan(initialBox.width);
     await page.getByRole('button', { name: 'オブジェクトパネルを表示', exact: true }).click();
     await expect(page.getByTestId('asset-tree_oak')).toBeVisible();
     await expect(page.locator('#properties-panel')).toHaveCount(0);
-    await page.getByRole('button', { name: '配置済み・プロパティパネルを表示', exact: true }).click();
+    await page.getByRole('button', { name: '商品・カートパネルを表示', exact: true }).click();
     await expect(page.locator('#properties-panel')).toBeVisible();
     await expect.poll(async () => (await canvas.boundingBox())!.width).toBe(initialBox.width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
@@ -58,6 +58,7 @@ test('S. 作業面・独立開閉・ダイアログのフォーカス・未保�
     await expect(dimensions).toBeFocused();
     await expect(page.getByTestId('save-status')).toHaveText('保存済み');
 
+    if (!await page.locator('.object-details').evaluate((element) => (element as HTMLDetailsElement).open)) await page.getByTestId('object-details-toggle').click();
     await page.getByTestId('position-x').fill('1.7');
     const back = page.getByRole('button', { name: '← 庭一覧', exact: true });
     await back.click();
@@ -76,8 +77,9 @@ test('S. 作業面・独立開閉・ダイアログのフォーカス・未保�
     expect(unexpectedDialogs).toBe(0);
     expect(await (await request.get(`${api}/gardens/${created.id}`)).json()).toEqual(saved);
 
-    const deletion = page.getByRole('button', { name: `${created.name}を削除`, exact: true });
+    const deletion = page.getByRole('button', { name: `${created.name}のオプション`, exact: true });
     await deletion.click();
+    await page.getByRole('button', { name: '削除', exact: true }).click();
     await expect(page.getByRole('button', { name: '取消', exact: true })).toBeFocused();
     await page.screenshot({ path: resolve('artifacts/e2e/workspace-delete-dialog.png'), fullPage: true });
     await page.keyboard.press('Escape');

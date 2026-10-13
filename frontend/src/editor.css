@@ -1,6 +1,13 @@
 /* The canvas, inspector and material tray each have a single layout responsibility. */
 .editor-shell { display: flex; flex-direction: column; height: 100dvh; min-height: 660px; background: #eff2ed; }
-.document-bar { display: flex; align-items: center; flex: 0 0 64px; gap: 15px; padding: 0 24px; background: #fff; border-bottom: 1px solid var(--line); }
+.document-bar { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: center; flex: 0 0 auto; min-height: 64px; gap: 10px 14px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+.document-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.document-identity .list-button { flex-shrink: 0; }
+.document-identity .document-title { flex: 1; min-width: 0; }
+.document-identity .document-title h1 { max-width: 100%; margin: 0; }
+.document-save { display: flex; align-items: center; gap: 12px; }
+.document-save .toolbar-status { margin-left: 0; }
+.document-bar .plan-feedback { grid-column: 1 / -1; order: 4; margin: 0; }
 .editor-brand { border: 0; border-right: 1px solid var(--line); padding: 0 24px 0 0; background: none; height: 30px; }
 .document-title { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
 .document-title h1 { font-size: 15px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 42vw; }

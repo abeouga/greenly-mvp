@@ -10,6 +10,7 @@ import './projects.css';
 import './plan.css';
 import './responsive.css';
 import './site-header.css';
+import './commerce.css';
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: { retry: 1, refetchOnWindowFocus: false },

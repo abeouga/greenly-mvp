@@ -49,7 +49,7 @@ export default defineConfig({
       url: e2eWebUrl,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { KUSAKARI_CANVAS_API_TARGET: e2eApiUrl },
+      env: { KUSAKARI_CANVAS_API_TARGET: e2eApiUrl, VITE_KUSAKARI_EC_URL: 'http://127.0.0.1:15186/' },
     },
   ],
 });

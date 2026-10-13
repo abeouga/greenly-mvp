@@ -14,15 +14,27 @@ test('共通ヘッダー・ECへの移動確認・未保存の変更保護', asy
     await expect(header.getByRole('link', { name: 'Canvas', exact: true })).toBeVisible();
     await expect(header.getByRole('link', { name: '出店者', exact: true })).toHaveAttribute('href', /\/seller$/);
     await expect(header.getByRole('link', { name: '注文履歴' })).toHaveAttribute('href', /\?panel=orders$/);
-    await expect(header.getByRole('link', { name: 'カートを開く', exact: true })).toHaveAttribute('href', /\/cart$/);
+    await expect(header.getByRole('link', { name: 'ログイン', exact: true })).toHaveAttribute('href', /\?panel=login$/);
+    await expect(header.getByRole('link', { name: /^カートを開く/ })).toHaveAttribute('href', /\/cart$/);
+    await expect(header.locator('.bag-text')).toHaveText('カート');
     await expect(page.locator('.announcement')).toContainText('ひと鉢からはじまる、緑のある暮らし。');
+
+    const panel = page.locator('.commerce-panel');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('.side-panel-controls')).toHaveCount(0);
+    await expect(panel).not.toContainText('受取店舗：');
+    await expect(panel).not.toContainText('庭に素材を配置すると、対応する商品候補を表示します。');
+    await page.getByRole('button', { name: '商品・カートパネルを隠す', exact: true }).click();
+    await expect(panel).toHaveCount(0);
+    await page.getByRole('button', { name: '商品・カートパネルを表示', exact: true }).click();
+    await expect(panel).toBeVisible();
 
     await page.getByRole('button', { name: '土台設定', exact: true }).click();
     await page.getByLabel('幅 (m)', { exact: true }).fill('11');
     await page.getByRole('button', { name: '土台に適用', exact: true }).click();
     await page.getByRole('button', { name: '土台設定を閉じる', exact: true }).click();
-    await expect(page.getByTestId('save-status')).toHaveText('未保存の変更');
-    await header.getByRole('link', { name: 'カートを開く', exact: true }).click();
+    await expect(page.getByTestId('save-garden')).toBeEnabled();
+    await header.getByRole('link', { name: /^カートを開く/ }).click();
     await expect(page.getByRole('dialog', { name: '変更を保存せずに戻りますか？' })).toBeVisible();
     await page.getByRole('button', { name: '編集を続ける', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/gardens/${garden.id}$`));
@@ -36,7 +48,7 @@ test('共通ヘッダー・ECへの移動確認・未保存の変更保護', asy
     await writeFile('artifacts/e2e/site-header-garden.json', JSON.stringify(saved, null, 2));
     await page.screenshot({ path: 'artifacts/e2e/site-header-editor-e2e.png' });
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(header.getByRole('link', { name: 'カートを開く', exact: true })).toBeVisible();
+    await expect(header.getByRole('link', { name: /^カートを開く/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: 'artifacts/e2e/site-header-mobile-e2e.png', fullPage: true });
     await page.goto('/');
