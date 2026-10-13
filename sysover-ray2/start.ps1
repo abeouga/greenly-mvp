@@ -2,7 +2,24 @@
 
 $ErrorActionPreference = 'Stop'
 $setup = Join-Path $PSScriptRoot 'setup.ps1'
-$runtimeRoot = Join-Path $env:LOCALAPPDATA 'Greenly\tools\dotnet-desktop-10'
+$pathSearchRoot = $PSScriptRoot
+$pathHelper = $null
+while (-not [string]::IsNullOrWhiteSpace($pathSearchRoot)) {
+  $candidateHelper = Join-Path $pathSearchRoot 'scripts\paths.ps1'
+  if (Test-Path -LiteralPath $candidateHelper -PathType Leaf) {
+    $pathHelper = $candidateHelper
+    break
+  }
+  $parent = Split-Path -Parent $pathSearchRoot
+  if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $pathSearchRoot) { break }
+  $pathSearchRoot = $parent
+}
+if ($null -eq $pathHelper) { throw 'Kusakari Canvasのパス設定スクリプトが見つかりません。プロジェクト内のsysover-ray2フォルダーから実行してください。' }
+. $pathHelper
+$repoRoot = Get-KusakariCanvasRepoRoot -StartPath $PSScriptRoot
+$canvasHome = Get-KusakariCanvasHome -RepoRoot $repoRoot
+$env:KUSAKARI_CANVAS_HOME = $canvasHome
+$runtimeRoot = Join-Path $canvasHome 'tools\dotnet-desktop-10'
 $executable = Join-Path $PSScriptRoot 'app\SysOverRay.exe'
 
 if (-not ('SysOverRayWindowActivation' -as [type])) {
@@ -47,7 +64,7 @@ public static class SysOverRayWindowActivation
             if (!className.ToString().StartsWith("HwndWrapper[SysOverRay;", StringComparison.Ordinal)) return true;
             var title = new StringBuilder(256);
             GetWindowText(hWnd, title, title.Capacity);
-            if (title.ToString() != "Greenly 起動オーバーレイ") return true;
+            if (title.ToString() != "Kusakari Canvas 起動オーバーレイ") return true;
 
             found = hWnd;
             return false;
@@ -77,6 +94,7 @@ if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
   throw "SysOverRay.exeが見つかりません: $executable"
 }
 
+$process = $null
 try {
   $targetExecutable = [IO.Path]::GetFullPath($executable)
   $existingProcesses = @(Get-CimInstance Win32_Process -Filter "Name='SysOverRay.exe'" |
@@ -96,7 +114,6 @@ try {
   }
 
   & $setup
-  if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'SysOverRayのセットアップに失敗しました。' }
 
   $systemDotnet = Get-Command dotnet.exe -ErrorAction SilentlyContinue | Select-Object -First 1
   $systemHasDesktopRuntime = $false
@@ -119,7 +136,7 @@ try {
     $window = [SysOverRayWindowActivation]::FindMainWindow([uint32]$process.Id)
     if ($window -ne [IntPtr]::Zero) {
       [SysOverRayWindowActivation]::Activate($window)
-      [void]$activationShell.AppActivate('Greenly 起動オーバーレイ')
+      [void]$activationShell.AppActivate('Kusakari Canvas 起動オーバーレイ')
       Start-Sleep -Milliseconds 250
       if ([SysOverRayWindowActivation]::IsWindowVisible($window) -and
           [SysOverRayWindowActivation]::GetForegroundWindow() -eq $window) {
@@ -139,6 +156,15 @@ try {
   } while ([DateTime]::UtcNow -lt $deadline)
   throw "SysOverRayは起動しましたが、30秒以内に操作画面の前面表示を確認できませんでした (PID $($process.Id))。"
 } catch {
+  if ($null -ne $process) {
+    try {
+      $process.Refresh()
+      if (-not $process.HasExited) {
+        $process.Kill()
+        if (-not $process.WaitForExit(5000)) { Write-Warning '失敗したSysOverRayプロセスが停止しませんでした。' }
+      }
+    } catch { Write-Warning "SysOverRayの後始末に失敗しました: $($_.Exception.Message)" }
+  }
   Write-Error $_ -ErrorAction Continue
   exit 1
 }

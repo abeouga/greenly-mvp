@@ -13,11 +13,14 @@ if ($env:OS -ne 'Windows_NT') {
   throw 'このセットアップはWindows用です。'
 }
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$toolsRoot = Join-Path $env:LOCALAPPDATA 'Greenly\tools'
+. (Join-Path $PSScriptRoot 'paths.ps1')
+$repoRoot = Get-KusakariCanvasRepoRoot -StartPath $PSScriptRoot
+$canvasHome = Get-KusakariCanvasHome -RepoRoot $repoRoot
+$env:KUSAKARI_CANVAS_HOME = $canvasHome
+$toolsRoot = Join-Path $canvasHome 'tools'
 $nodeTools = Join-Path $toolsRoot 'node'
 $uvTools = Join-Path $toolsRoot 'uv'
-$tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("greenly-setup-{0}" -f [guid]::NewGuid().ToString('N'))
+$tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("kusakari-canvas-setup-{0}" -f [guid]::NewGuid().ToString('N'))
 
 function Add-PathFirst {
   param([string]$Path)
@@ -29,6 +32,7 @@ function Add-PathFirst {
 function Get-WindowsArchitecture {
   $architecture = $env:PROCESSOR_ARCHITEW6432
   if ([string]::IsNullOrWhiteSpace($architecture)) { $architecture = $env:PROCESSOR_ARCHITECTURE }
+  if ([string]::IsNullOrWhiteSpace($architecture)) { throw 'Windows CPUアーキテクチャを判定できません。' }
   switch ($architecture.ToUpperInvariant()) {
     'AMD64' { return 'x64' }
     'ARM64' { return 'arm64' }
@@ -56,7 +60,11 @@ function Get-NodeInstallation {
   if (-not (Test-Path -LiteralPath $nodePath -PathType Leaf) -or
       -not (Test-Path -LiteralPath $npmPath -PathType Leaf)) { return $null }
 
-  $versionText = (& $nodePath --version 2>$null | Select-Object -First 1).Trim()
+  $versionOutput = @(& $nodePath --version 2>$null)
+  if ($LASTEXITCODE -ne 0 -or $versionOutput.Count -eq 0) { return $null }
+  $versionText = [string]$versionOutput[0]
+  if ([string]::IsNullOrWhiteSpace($versionText)) { return $null }
+  $versionText = $versionText.Trim()
   if ($versionText -notmatch '^v?(\d+\.\d+\.\d+)') { return $null }
   if ([version]$Matches[1] -lt [version]'22.12.0') { return $null }
   return [pscustomobject]@{ Node = $nodePath; Npm = $npmPath; Version = $versionText }
@@ -127,7 +135,7 @@ function Get-UvInstallation {
 
   Write-Host '利用可能なuv 0.8以降が見つからないため、公式リリースをチェックサム検証付きで取得します。'
   $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/astral-sh/uv/releases/latest' `
-    -Headers @{ 'User-Agent' = 'Greenly-setup' } -TimeoutSec 30
+    -Headers @{ 'User-Agent' = 'KusakariCanvas-setup' } -TimeoutSec 30
   $architecture = Get-WindowsArchitecture
   $target = if ($architecture -eq 'arm64') { 'aarch64' } else { 'x86_64' }
   $archiveName = "uv-$target-pc-windows-msvc.zip"
@@ -186,12 +194,20 @@ try {
   $nodeModules = Join-Path $repoRoot 'node_modules'
   $packageLock = Join-Path $repoRoot 'package-lock.json'
   $packageHash = Get-FileSha256 -Path $packageLock
-  $packageMarker = Join-Path $nodeModules '.greenly-package-lock.sha256'
+  $packageMarker = Join-Path $nodeModules '.kusakari-canvas-package-lock.sha256'
+  $packageLocationMarker = Join-Path $nodeModules '.kusakari-canvas-install-location'
+  $repoLocation = [IO.Path]::GetFullPath($repoRoot).TrimEnd('\')
+  $installedRepoLocation = if (Test-Path -LiteralPath $packageLocationMarker -PathType Leaf) {
+    (Get-Content -Raw -LiteralPath $packageLocationMarker).Trim()
+  } else { '' }
+  $repositoryMoved = -not [string]::IsNullOrWhiteSpace($installedRepoLocation) -and
+    $installedRepoLocation -ine $repoLocation
   $installedPackageHash = if (Test-Path -LiteralPath $packageMarker) { (Get-Content -Raw -LiteralPath $packageMarker).Trim() } else { '' }
-  if ($installedPackageHash -ne $packageHash) {
+  if ($installedPackageHash -ne $packageHash -or $repositoryMoved -or
+      [string]::IsNullOrWhiteSpace($installedRepoLocation)) {
     $installedTreeMatches = $false
     $installedPackageLock = Join-Path $nodeModules '.package-lock.json'
-    if (Test-Path -LiteralPath $installedPackageLock -PathType Leaf) {
+    if (-not $repositoryMoved -and (Test-Path -LiteralPath $installedPackageLock -PathType Leaf)) {
       try {
         $lockCheck = @'
 const fs = require('node:fs');
@@ -235,6 +251,7 @@ process.exitCode = matches ? 0 : 1;
       } finally { Pop-Location }
     }
     Set-Content -LiteralPath $packageMarker -Value $packageHash -Encoding ASCII
+    Set-Content -LiteralPath $packageLocationMarker -Value $repoLocation -Encoding UTF8
   } else {
     Write-Host 'JavaScript依存関係はロックファイルと一致しています。'
   }
@@ -243,12 +260,24 @@ process.exitCode = matches ? 0 : 1;
   $uvLock = Join-Path $backendRoot 'uv.lock'
   $uvHash = Get-FileSha256 -Path $uvLock
   $venv = Join-Path $backendRoot '.venv'
-  $uvMarker = Join-Path $venv '.greenly-uv-lock.sha256'
+  $uvMarker = Join-Path $venv '.kusakari-canvas-uv-lock.sha256'
+  $uvLocationMarker = Join-Path $venv '.kusakari-canvas-install-location'
+  $installedUvLocation = if (Test-Path -LiteralPath $uvLocationMarker -PathType Leaf) {
+    (Get-Content -Raw -LiteralPath $uvLocationMarker).Trim()
+  } else { '' }
+  $venvMoved = -not [string]::IsNullOrWhiteSpace($installedUvLocation) -and
+    $installedUvLocation -ine $repoLocation
   $installedUvHash = if (Test-Path -LiteralPath $uvMarker) { (Get-Content -Raw -LiteralPath $uvMarker).Trim() } else { '' }
-  if ($installedUvHash -ne $uvHash -or -not (Test-Path -LiteralPath (Join-Path $venv 'Scripts\python.exe'))) {
+  if ($installedUvHash -ne $uvHash -or $venvMoved -or
+      [string]::IsNullOrWhiteSpace($installedUvLocation) -or
+      -not (Test-Path -LiteralPath (Join-Path $venv 'Scripts\python.exe'))) {
     $venvPython = Join-Path $venv 'Scripts\python.exe'
     $venvMatchesLock = $false
-    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+    if ($venvMoved) {
+      Write-Host 'プロジェクトの保存場所が変わったため、Python仮想環境を作り直します。'
+      & $uvPath venv --clear --python '3.12' --project $backendRoot $venv
+      if ($LASTEXITCODE -ne 0) { throw "移動後のPython仮想環境作成に失敗しました (exit $LASTEXITCODE)。" }
+    } elseif (Test-Path -LiteralPath $venvPython -PathType Leaf) {
       & $uvPath sync --project $backendRoot --locked --check
       $venvMatchesLock = $LASTEXITCODE -eq 0
     }
@@ -260,6 +289,7 @@ process.exitCode = matches ? 0 : 1;
       if ($LASTEXITCODE -ne 0) { throw "uv syncが終了コード $LASTEXITCODE で失敗しました。" }
     }
     Set-Content -LiteralPath $uvMarker -Value $uvHash -Encoding ASCII
+    Set-Content -LiteralPath $uvLocationMarker -Value $repoLocation -Encoding UTF8
   } else {
     Write-Host 'Python依存関係はロックファイルと一致しています。'
   }
@@ -276,18 +306,19 @@ process.exitCode = matches ? 0 : 1;
   }
 
   . (Join-Path $PSScriptRoot 'mysql-tools.ps1')
-  $mysqlBin = Get-GreenlyMySqlBin -Portable:($DatabaseMode -eq 'managed')
-  Initialize-GreenlyMySqlRuntime -Bin $mysqlBin
+  $mysqlBin = Get-KusakariCanvasMySqlBin -Portable:($DatabaseMode -eq 'managed')
+  Initialize-KusakariCanvasMySqlRuntime -Bin $mysqlBin
   Add-PathFirst -Path $mysqlBin
+  $env:KUSAKARI_CANVAS_MYSQL_BIN = $mysqlBin
   Push-Location $backendRoot
-  try { & $uvPath run --locked --project $backendRoot python -m greenly_api.setup_database --mode $DatabaseMode --bin $mysqlBin }
+  try { & $uvPath run --locked --project $backendRoot python -m kusakari_canvas_api.setup_database --mode $DatabaseMode --bin $mysqlBin }
   finally { Pop-Location }
   if ($LASTEXITCODE -ne 0) { throw 'MySQLのセットアップに失敗しました。上の診断を確認してsetup.batを再実行してください。' }
 
-  Write-Host 'Greenlyのツール・依存関係・MySQLのセットアップが完了しました。'
+  Write-Host 'Kusakari Canvasのツール・依存関係・MySQLのセットアップが完了しました。'
 } finally {
   $resolvedTemporary = [IO.Path]::GetFullPath($tempRoot)
-  if ($resolvedTemporary.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\greenly-setup-',
+  if ($resolvedTemporary.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\kusakari-canvas-setup-',
       [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $resolvedTemporary)) {
     Remove-Item -LiteralPath $resolvedTemporary -Recurse -Force
   }

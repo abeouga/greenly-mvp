@@ -2,10 +2,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { PerspectiveCamera, Vector3 } from 'three';
+import { api } from './api-url.js';
 import { createPhotoCamera } from '../frontend/src/three/photoCamera.js';
 import type { GardenDocument, ImagePoint, PhotoCalibration } from '../frontend/src/types/garden.js';
 
-const api = 'http://127.0.0.1:18080/api';
 const artifacts = resolve('artifacts/e2e');
 const source = new PerspectiveCamera(50, 4 / 3, 0.01, 1000);
 source.position.set(5, 8, 13); source.lookAt(0, 0, 0); source.updateMatrixWorld(true);
@@ -124,7 +124,7 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     await page.getByTestId('photo-edge-0').click();
     await expect(page.getByRole('dialog', { name: '選択した辺の長さ' })).toContainText('現在の実寸');
     expect(parseFloat((await page.getByTestId('edge-measurement').textContent())!)).toBeCloseTo(10, 1);
-    await expect(page.getByLabel('長さ (m)', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('辺の長さ（m）', { exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('save-status')).toHaveText('保存済み');
     // Change the metric scale in the calibration UI; the photographed outline must stay fixed.
@@ -158,6 +158,16 @@ test('O. 既知カメラの写真で校正・高さ投影・写真配置・MySQL
     expect(await (await request.get(`${api}/gardens/${initial.id}`)).json()).toEqual(edited);
     await page.screenshot({ path: resolve(artifacts, 'camera-calibrated-measurement.png'), fullPage: true });
     await writeFile(resolve(artifacts, 'camera-calibrated-measurement.json'), JSON.stringify(edited, null, 2));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '数量・施工範囲', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: '配置数量・施工範囲' })).toContainText('m²');
+    await page.getByRole('dialog').getByRole('button', { name: '閉じる', exact: true }).click();
+    await page.getByRole('button', { name: '完成イメージを確認', exact: true }).click();
+    const completionImage = page.getByAltText('現在の庭の完成イメージ');
+    await expect(completionImage).toBeVisible();
+    expect(await completionImage.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBe(edited.photo!.imageWidth);
+    await page.screenshot({ path: resolve(artifacts, 'camera-calibrated-completion.png'), fullPage: true });
+
   } finally { expect((await request.delete(`${api}/gardens/${initial.id}`)).status()).toBe(204); }
 });
 

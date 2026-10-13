@@ -11,7 +11,7 @@ from uuid import uuid4
 from PIL import Image
 from sqlalchemy import text
 
-from greenly_api.database import create_database_engine
+from kusakari_canvas_api.database import create_database_engine
 
 
 def request(base: str, method: str, path: str, data=None, *, raw: bytes | None = None):
@@ -75,7 +75,7 @@ def verify_api(base: str, settings) -> list[str]:
 
     try:
         status, assets, headers = request(base, "GET", "/api/assets")
-        assert status == 200 and headers["x-greenly-backend"] == "fastapi"
+        assert status == 200 and headers["x-kusakari-canvas-backend"] == "fastapi"
         assert [a["id"] for a in assets] == sorted(a["id"] for a in assets)
         assert {a["id"] for a in assets} >= {"tree_oak", "shrub_boxwood", "brick_paver", "bench_wood"}
         for a in assets:

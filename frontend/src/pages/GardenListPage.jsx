@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { gardenApi } from '../api/gardens';
 import { MAX_GARDEN_NAME_LENGTH } from '../domain/limits';
-import { GardenHeader } from '../components/GardenHeader';
+import { SiteHeader } from '../components/SiteHeader';
 import { Dialog } from '../components/Dialog';
 import { UiIcon } from '../components/UiIcon';
 export function GardenListPage() {
@@ -11,6 +11,27 @@ export function GardenListPage() {
     const [name, setName] = useState('');
     const [formError, setFormError] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [copyError, setCopyError] = useState('');
+    const [copying, setCopying] = useState(false);
+    async function copyGarden(id) {
+        if (copying) return;
+        setCopying(true); setCopyError('');
+        let created = null;
+        try {
+            const source = await gardenApi.getGarden(id);
+            created = await gardenApi.createGarden({ name: source.name.slice(0, 54) + '（複製）' });
+            const document = { ...source, id: created.id, revision: created.revision, name: created.name };
+            document.objects = source.objects.map((object) => ({ ...structuredClone(object), id: crypto.randomUUID() }));
+            await gardenApi.saveGarden(document);
+            await queryClient.invalidateQueries({ queryKey: ['gardens'] });
+        } catch (error) {
+            let message = '庭を複製できませんでした。';
+            if (error instanceof Error) message = error.message;
+            if (created) message += ' 作成済みの空の複製は一覧から確認・削除できます。';
+            setCopyError(message);
+            await queryClient.invalidateQueries({ queryKey: ['gardens'] });
+        } finally { setCopying(false); }
+    }
     const createGarden = useMutation({
         mutationFn: (request) => gardenApi.createGarden(request),
         onSuccess: async (document) => {
@@ -33,10 +54,10 @@ export function GardenListPage() {
         }
         createGarden.mutate({ name: name.trim() });
     }
-    return (<div className="page-shell">
-      <GardenHeader title="庭のワークスペース"/>
+    return (<div className="canvas-shell canvas-list-shell">
+      <SiteHeader />
+      <div className="page-shell">
       <main className="garden-list-layout">
-        <div className="projects-intro"><h2>マイガーデン</h2><p>写真と3Dで、庭の形や植栽の配置を編集します。</p></div>
         <section className="panel create-panel" aria-labelledby="create-heading">
           <div className="section-heading">
             <h2 id="create-heading"><UiIcon name="plus"/>新しい庭をつくる</h2>
@@ -53,6 +74,7 @@ export function GardenListPage() {
           </form>
         </section>
 
+        {copyError && <p className="notice notice-error" role="alert">{copyError}</p>}
         <section className="panel saved-panel" aria-labelledby="saved-heading">
           <div className="section-heading section-heading-inline">
             <div>
@@ -76,12 +98,13 @@ export function GardenListPage() {
                       <span>最終保存 {new Date(garden.updatedAt).toLocaleString('ja-JP')}</span>
                     </span>
                   </button>
+                  <button className="plan-duplicate" disabled={copying} onClick={() => copyGarden(garden.id)}>この庭を複製</button>
                   <button className="icon-button delete-garden" aria-label={`${garden.name}を削除`} disabled={removeGarden.isPending} onClick={() => { removeGarden.reset(); setDeleteTarget({ id: garden.id, name: garden.name }); }}><UiIcon name="trash" size={17}/></button>
                 </li>))}
             </ul>)}
         </section>
       </main>
-      <footer className="page-footer">Greenly<span>庭の設計と配置</span></footer>
+      <footer className="page-footer">kusakari {new Date().getFullYear()}</footer>
       {deleteTarget && <Dialog title="この庭を削除しますか？" description="削除すると元に戻せません。" busy={removeGarden.isPending} onClose={() => setDeleteTarget(null)} footer={<>
         <button type="button" className="button button-secondary" data-dialog-autofocus disabled={removeGarden.isPending} onClick={() => setDeleteTarget(null)}>取消</button>
         <button type="button" className="button button-danger" disabled={removeGarden.isPending} onClick={() => removeGarden.mutate(deleteTarget.id)}>{removeGarden.isPending ? '削除中…' : '庭を削除'}</button>
@@ -89,5 +112,5 @@ export function GardenListPage() {
         <p>庭の写真、輪郭、配置したすべての素材を削除します。</p>
         {removeGarden.isError && <p className="notice notice-error" role="alert">削除できませんでした。接続を確認して再試行してください。</p>}
       </Dialog>}
-    </div>);
+    </div></div>);
 }

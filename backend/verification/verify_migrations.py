@@ -5,9 +5,9 @@ from uuid import uuid4
 
 from sqlalchemy import inspect, text
 
-from greenly_api.config import BACKEND_ROOT
-from greenly_api.database import create_database_engine
-from greenly_api.migrations import current_revision, migrate, validate_schema
+from kusakari_canvas_api.config import BACKEND_ROOT
+from kusakari_canvas_api.database import create_database_engine
+from kusakari_canvas_api.migrations import current_revision, migrate, validate_schema
 
 
 def data_digest(connection) -> str:
@@ -30,7 +30,7 @@ def legacy_fixture(connection, version: int) -> None:
         connection.execute(text("INSERT INTO flyway_schema_history VALUES (:rank,:version,'SQL',true)"),
                            {"rank": rank, "version": str(rank)})
     connection.execute(text("INSERT INTO gardens (id,owner_id,name,width,depth,revision,updated_at) "
-                            "VALUES (:id,'greenly-e2e-demo','migration sentinel',10,8,7,'2026-01-01 00:00:00.123456')"),
+                            "VALUES (:id,'kusakari-canvas-e2e-demo','migration sentinel',10,8,7,'2026-01-01 00:00:00.123456')"),
                        {"id": "12345678-1234-4321-8321-123456789012"})
     if version == 2:
         connection.execute(text("UPDATE gardens SET photo_json='{}'"))
@@ -44,7 +44,7 @@ def verify_migrations(settings) -> list[dict]:
     created = []
     try:
         for scenario in ("fresh", "v1", "v2", "mismatch", "failed_history"):
-            name = f"greenly_e2e_migration_{uuid4().hex[:12]}"
+            name = f"kusakari_canvas_e2e_migration_{uuid4().hex[:12]}"
             with admin.connect() as connection:
                 connection.execute(text(f"CREATE DATABASE `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"))
                 created.append(name)
@@ -97,7 +97,8 @@ def verify_migrations(settings) -> list[dict]:
     finally:
         with admin.connect() as connection:
             for name in created:
-                if not name.startswith("greenly_e2e_migration_") or len(name) != 34:
+                prefix = "kusakari_canvas_e2e_migration_"
+                if not name.startswith(prefix) or len(name) != len(prefix) + 12:
                     raise RuntimeError("Unsafe test database cleanup name")
                 connection.execute(text(f"DROP DATABASE `{name}`"))
         admin.dispose()

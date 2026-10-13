@@ -5,8 +5,8 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from greenly_api.config import REPO_ROOT, Settings
-from greenly_api.database import create_database_engine
+from kusakari_canvas_api.config import REPO_ROOT, Settings
+from kusakari_canvas_api.database import create_database_engine
 
 from .verify_api import request
 
@@ -36,7 +36,7 @@ def main() -> None:
             for garden in connection.execute(text("SELECT * FROM gardens WHERE owner_id=:owner"),
                                               {"owner": settings.owner_id}).mappings():
                 status, doc, headers = request(args.base_url, "GET", "/api/gardens/" + garden["id"])
-                assert status == 200 and headers["x-greenly-backend"] == "fastapi"
+                assert status == 200 and headers["x-kusakari-canvas-backend"] == "fastapi"
                 assert doc["schemaVersion"] == 1
                 assert all(doc[key] == garden[key] for key in ("id", "revision", "name", "width", "depth"))
                 assert doc["photo"] == (json.loads(garden["photo_json"]) if garden["photo_json"] else None)

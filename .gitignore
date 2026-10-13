@@ -2,6 +2,8 @@ node_modules/
 frontend/dist/
 backend/target/
 backend/.venv/
+**/bin/
+**/obj/
 **/__pycache__/
 .ruff_cache/
 playwright-report/

@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { api } from './api-url.js';
 import type { GardenDocument } from '../frontend/src/types/garden.js';
 
-const api = 'http://127.0.0.1:18080/api';
 const directory = resolve('artifacts/e2e');
 const boundary = [{ x: .2, y: .8 }, { x: .8, y: .8 }, { x: .8, y: .5 }, { x: .55, y: .5 }, { x: .55, y: .2 }, { x: .2, y: .2 }];
 const lengths = [10, 4, 25 / 6, 4, 35 / 6, 8];
@@ -45,8 +45,8 @@ for (const fixedProjection of [false, true]) {
         await expect(popup).toBeVisible();
         await expect(page.getByTestId('edge-measurement')).toHaveText(length.toFixed(2) + ' m');
         await expect(popup).toContainText('現在の概算');
-        await expect(popup.locator('input')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: '長さを適用' })).toHaveCount(0);
+        await expect(popup.getByLabel('辺の長さ（m）')).toBeFocused();
+        await expect(popup.getByRole('button', { name: '長さを適用' })).toBeEnabled();
         await expect(page.getByTestId('photo-ground')).toHaveAttribute('points', outline!);
         await expect(page.getByTestId('save-status')).toHaveText('保存済み');
         await expect(page.getByTestId('save-garden')).toBeDisabled();
@@ -65,7 +65,7 @@ for (const fixedProjection of [false, true]) {
         return box.x >= stage.x && box.y >= stage.y && box.x + box.width <= stage.x + stage.width && box.y + box.height <= stage.y + stage.height;
       }).toBe(true);
       await page.screenshot({ path: resolve(directory, 'edge-measurement-1024-' + mode + '.png'), fullPage: true });
-      await popup.getByRole('button', { name: '閉じる', exact: true }).click();
+      await popup.getByRole('button', { name: '取消', exact: true }).click();
       await expect(page.getByTestId('photo-edge-4')).toBeFocused();
       const camera = page.getByRole('button', { name: '写真のカメラを設定' });
       await camera.click();

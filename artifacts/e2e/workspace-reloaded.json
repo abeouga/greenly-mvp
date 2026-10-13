@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "a1d7c75c-bc3c-47e7-a001-a9e16e63ee96",
+  "id": "8d3d6ee4-64a1-422b-98f8-9eb3c7fa39f2",
   "revision": 1,
-  "name": "E2E workspace 1790944253168",
+  "name": "E2E workspace 1791720840073",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "53a6e16a-ca98-47a0-a3ed-d1c462ae6c86",
+      "id": "0e9d25ec-0250-4cb0-93d1-5a352fde2b05",
       "assetId": "tree_oak",
       "position": {
         "x": 0,
         "y": 0,
-        "z": -0.0000011111111148831739
+        "z": -0.0000011111111148825233
       },
       "rotation": {
         "x": 0,

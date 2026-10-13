@@ -1,7 +1,7 @@
 [project]
-name = "greenly-api"
+name = "kusakari-canvas-api"
 version = "0.2.0"
-description = "Local manual garden editor API"
+description = "Kusakari Canvas editor API"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi>=0.115,<1",

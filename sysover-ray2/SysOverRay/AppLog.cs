@@ -3,17 +3,22 @@ namespace SysOverRay;
 public static class AppLog
 {
     private static readonly object Sync = new();
-    private static readonly string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GreenlyOverlay");
+    private static readonly string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KusakariCanvasOverlay");
     public static string FilePath { get; } = Path.Combine(DirectoryPath, "overlay.log");
 
     public static void Write(string message)
     {
-        lock (Sync)
+        try
         {
-            Directory.CreateDirectory(DirectoryPath);
-            RotateIfNeeded();
-            File.AppendAllText(FilePath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}{Environment.NewLine}");
+            lock (Sync)
+            {
+                Directory.CreateDirectory(DirectoryPath);
+                RotateIfNeeded();
+                File.AppendAllText(FilePath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}{Environment.NewLine}");
+            }
         }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static void RotateIfNeeded()

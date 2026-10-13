@@ -1,6 +1,6 @@
-# Greenly 開発規約
+# Kusakari Canvas3D庭づくり機能 開発規約
 
-このリポジトリは、AI機能のない手動3D庭エディタMVPです。ユーザー操作、構造化された `GardenDocument`、表示、保存・復元の実際の流れを完了条件にします。
+このリポジトリは、KusakariのガーデニングEC内で使う3D庭づくり機能（Kusakari Canvas）の試作です。独立した購入サービスではありません。現行MVPはローカル環境で独立起動しますが、これは開発上の分離です。商品・価格・在庫・カート・注文の正本はKusakari EC側とし、このリポジトリでは庭データ、写真、配置を扱います。完了条件は、ユーザー操作、構造化された `GardenDocument`、表示、保存・復元の実際の流れです。
 
 ## 責務とデータ境界
 
@@ -9,6 +9,8 @@
 - バックエンドは、Pydantic Request/Response DTO、ドメイン検証、SQLAlchemy Entityを分けます。EntityをAPIへ直接返しません。
 - 庭の保存は全体スナップショットです。各ポインター移動からAPIを呼ばず、PUTをMySQLトランザクション内でrevision比較して行います。
 - ローカルデモ所有者はサーバー側のdev/e2e環境だけで決定し、クライアントからownerIdを受け付けません。デモ設定は127.0.0.1に限定します。
+- Kusakari ECとの商品連携では、GardenDocumentから商品候補照合用の `materialCode`・`quantity`・`unit` を作り、Three.jsのScene/Object3D/Meshは送信しません。商品選択後の価格・在庫・カート・注文はEC側で扱います。
+- ローカルMVPの固定デモ所有者は開発・E2E専用です。本番の庭データはKusakari側の認証済み利用者に紐付ける方針とし、クライアント指定のownerIdを採用しません。
 - 1 Three.js unit = 1m、Yが上、地面Y=0、庭中心が原点です。配置基準点だけを庭範囲に制限します。回転はY軸、拡縮は一様です。
 - 依存方向はUI/3D操作 → 検証済み編集操作 → GardenDocument → API DTO → Service → Repository/MySQLです。
 
@@ -29,3 +31,7 @@
 - 重要な形式・永続化・認証境界の変更は `docs/` にContext/Decision/Alternatives/Consequencesを記録します。
 - 秘密情報、機械固有設定、実利用者データをGitやログ、テスト成果物に含めません。
 - 明示依頼なしにcommit、push、破壊的Git操作、実データ削除をしません。
+
+## 2026-10-11 承認済み画面モックの範囲
+
+機能要件61項目への対応として、未実装の認証・審査・通知・精算・AI候補などは明示した画面モックを許可します。モック状態はメモリ内で共有し、再読み込みで初期化します。正常系の実APIをモックへ置き換える許可ではありません。購入・庭保存・商品候補照合は実API/MySQLを継続します。機能範囲はECのdocs/functional-requirements.mdとCanvasのdocs/ec-integration.mdに記録します。

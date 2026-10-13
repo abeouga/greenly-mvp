@@ -19,4 +19,4 @@
 - 停止後の対象LISTENと旧LISTEN所有プロセスは0。
 - 隔離コピーで実行ファイル欠落を起こし、cmdがキー入力前に終了しないこと、入力後の終了コード1を確認。
 
-詳細はlaunch-lifecycle-report.json、failure-cmd-report.json、launch-current.png、launch-stopped.png、launch-final-running.pngに保存しています。検証終了時はオーバーレイとGreenlyを起動した状態です。
+詳細はlaunch-lifecycle-report.json、failure-cmd-report.json、launch-current.png、launch-stopped.png、launch-final-running.pngに保存しています。検証終了時はオーバーレイとKusakariCanvasを起動した状態です。

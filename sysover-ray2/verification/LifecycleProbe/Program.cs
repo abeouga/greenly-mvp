@@ -2,14 +2,14 @@ using System.Text.Json;
 using SysOverRay;
 
 var destinationRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-var greenlyRoot = Path.GetFullPath(Path.Combine(destinationRoot, ".."));
+var gardenRoot = Path.GetFullPath(Path.Combine(destinationRoot, ".."));
 var settings = new OverlaySettings
 {
-    GreenlyRoot = Path.GetRelativePath(AppContext.BaseDirectory, greenlyRoot),
+    ProjectRoot = Path.GetRelativePath(AppContext.BaseDirectory, gardenRoot),
     StartupTimeoutSeconds = 180,
     ShutdownTimeoutSeconds = 20
 };
-var controller = new GreenlyController(settings);
+var controller = new KusakariCanvasController(settings);
 var observations = new List<object>();
 
 void Record(string step, ServiceStatus status)
@@ -33,7 +33,7 @@ async Task<bool> IsWebHealthy(int port)
     {
         using var response = await client.GetAsync($"http://127.0.0.1:{port}/");
         return response.IsSuccessStatusCode &&
-            (await response.Content.ReadAsStringAsync()).Contains("Greenly", StringComparison.OrdinalIgnoreCase);
+            (await response.Content.ReadAsStringAsync()).Contains("Kusakari Canvas", StringComparison.OrdinalIgnoreCase);
     }
     catch (HttpRequestException) { return false; }
     catch (TaskCanceledException) { return false; }
@@ -52,13 +52,13 @@ try
     await controller.StartAsync();
     var started = await controller.GetStatusAsync();
     Record("start", started);
-    if (!started.BothHealthy) throw new InvalidOperationException("Start did not produce healthy Greenly Web and API.");
+    if (!started.BothHealthy) throw new InvalidOperationException("Start did not produce healthy Kusakari Canvas Web and API.");
     var managedPort = new Uri(started.FrontendUrl!).Port;
 
     await controller.StopAsync();
     var stopped = await controller.GetStatusAsync();
     Record("stop", stopped);
-    if (stopped.AnyHealthy || await IsWebHealthy(managedPort)) throw new InvalidOperationException("Managed Greenly Web remained healthy after stop.");
+    if (stopped.AnyHealthy || await IsWebHealthy(managedPort)) throw new InvalidOperationException("Managed Kusakari Canvas Web remained healthy after stop.");
 
     await controller.StartAsync();
     var restartedFromStopped = await controller.GetStatusAsync();
@@ -74,7 +74,7 @@ try
     var final = await controller.GetStatusAsync();
     Record("final-stop", final);
     if (final.AnyHealthy || await IsWebHealthy(new Uri(restarted.FrontendUrl!).Port))
-        throw new InvalidOperationException("Managed Greenly Web remained after final stop.");
+        throw new InvalidOperationException("Managed Kusakari Canvas Web remained after final stop.");
 }
 finally
 {
@@ -84,9 +84,8 @@ finally
 var report = new
 {
     result = "passed",
-    test = "GreenlyController existing-project stop and real start/stop/restart",
+    test = "KusakariCanvasController existing-project stop and real start/stop/restart",
     overlaySource = "sysover-ray2/SysOverRay",
-    greenlyRoot = "gleenly-mvp",
     observations
 };
 var reportPath = Path.Combine(destinationRoot, "verification", "lifecycle-report.json");

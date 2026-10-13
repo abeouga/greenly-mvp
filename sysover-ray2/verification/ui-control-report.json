@@ -1,28 +1,28 @@
-{
+﻿{
     "result":  "passed",
-    "verifiedAt":  "2026-10-01T01:51:39.1082850+09:00",
+    "verifiedAt":  "2026-10-08T19:15:19.7131650+09:00",
     "observations":  [
                          {
                              "step":  "reopened-existing-session",
-                             "summary":  "Greenly 稼働中",
-                             "lastAction":  "このGreenlyの起動・停止・再起動",
+                             "summary":  "Kusakari Canvas 稼働中",
+                             "lastAction":  "19:13:18  再起動完了",
                              "stopEnabled":  true,
                              "restartEnabled":  true,
                              "listeners":  [
                                                {
                                                    "LocalPort":  8080,
-                                                   "OwningProcess":  30940
+                                                   "OwningProcess":  17508
                                                },
                                                {
                                                    "LocalPort":  5173,
-                                                   "OwningProcess":  33568
+                                                   "OwningProcess":  26540
                                                }
                                            ]
                          },
                          {
                              "step":  "existing-session-stop",
                              "summary":  "停止中",
-                             "lastAction":  "01:50:05  停止完了",
+                             "lastAction":  "19:13:41  停止完了",
                              "stopEnabled":  false,
                              "restartEnabled":  true,
                              "listeners":  [
@@ -31,52 +31,52 @@
                          },
                          {
                              "step":  "restart-from-stopped",
-                             "summary":  "Greenly 稼働中",
-                             "lastAction":  "01:50:52  再起動完了",
+                             "summary":  "Kusakari Canvas 稼働中",
+                             "lastAction":  "19:14:26  再起動完了",
                              "stopEnabled":  true,
                              "restartEnabled":  true,
                              "listeners":  [
                                                {
                                                    "LocalPort":  8080,
-                                                   "OwningProcess":  23524
+                                                   "OwningProcess":  37360
                                                },
                                                {
                                                    "LocalPort":  5173,
-                                                   "OwningProcess":  17896
+                                                   "OwningProcess":  27456
                                                }
                                            ]
                          },
                          {
                              "step":  "reopened-running-session",
-                             "summary":  "Greenly 稼働中",
-                             "lastAction":  "このGreenlyの起動・停止・再起動",
+                             "summary":  "状態を確認しています",
+                             "lastAction":  "このKusakari Canvasの起動・停止・再起動",
                              "stopEnabled":  true,
                              "restartEnabled":  true,
                              "listeners":  [
                                                {
                                                    "LocalPort":  8080,
-                                                   "OwningProcess":  23524
+                                                   "OwningProcess":  37360
                                                },
                                                {
                                                    "LocalPort":  5173,
-                                                   "OwningProcess":  17896
+                                                   "OwningProcess":  27456
                                                }
                                            ]
                          },
                          {
                              "step":  "restart-after-reopen",
-                             "summary":  "Greenly 稼働中",
-                             "lastAction":  "01:51:37  再起動完了",
+                             "summary":  "Kusakari Canvas 稼働中",
+                             "lastAction":  "19:15:16  再起動完了",
                              "stopEnabled":  true,
                              "restartEnabled":  true,
                              "listeners":  [
                                                {
                                                    "LocalPort":  8080,
-                                                   "OwningProcess":  30068
+                                                   "OwningProcess":  2984
                                                },
                                                {
                                                    "LocalPort":  5173,
-                                                   "OwningProcess":  36592
+                                                   "OwningProcess":  18664
                                                }
                                            ]
                          }

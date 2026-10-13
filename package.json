@@ -1,5 +1,5 @@
 {
-  "name": "greenly-mvp",
+  "name": "kusakari-canvas",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,6 @@
   ],
   "scripts": {
     "dev:web": "npm --workspace frontend run dev",
-    "dev:web:e2e": "npm --workspace frontend run dev -- --port 15174",
     "dev:api": "node scripts/api.mjs dev",
     "migrate:api": "node scripts/api.mjs migrate",
     "verify:api": "node scripts/api.mjs verify",
@@ -17,7 +16,7 @@
     "lint": "eslint frontend/src e2e scripts playwright.config.ts",
     "compile:api": "node scripts/api.mjs compile",
     "build:web": "npm --workspace frontend run build",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/e2e.mjs",
     "assets:generate": "node scripts/generate-assets.mjs"
   },
   "devDependencies": {

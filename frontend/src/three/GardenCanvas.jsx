@@ -1,3 +1,4 @@
+import { CaptureReady } from './CaptureReady';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, TransformControls, useGLTF } from '@react-three/drei';
@@ -15,6 +16,7 @@ export function GardenCanvas({ document, assets, selectedAssetId, disabled, retr
     }
     return (<div className="garden-canvas" data-testid="garden-canvas">
       <Canvas camera={{ position: [13, 14, 15], fov: 42, near: 0.1, far: 300 }} dpr={[1, 1.5]} gl={{ antialias: true }}>
+        <CaptureReady />
         <color attach="background" args={['#eef1e7']}/>
         <ambientLight intensity={1.7}/>
         <directionalLight position={[7, 12, 5]} intensity={2.1}/>
@@ -188,6 +190,6 @@ function PlacedObject({ object, asset, disabled, onModelLoaded, onModelFailed })
     return (<>
       {content}
       {/* Drei reattaches when children change; reattaching during a drag clears the active axis. */}
-      {tool === 'rotate' ? (selected && !disabled && <RotationRing target={group} position={object.position} radius={Math.max(1.4, Math.hypot(asset.baseDimensions.width, asset.baseDimensions.depth) * object.scale.x / 2 + 0.4)} onCommit={commit}/>) : <TransformControls key={controlEpoch} object={group} enabled={selected && !disabled} axis={selected ? undefined : null} mode={tool === 'move' ? 'translate' : 'scale'} space="local" size={1} showX={selected} showY={false} showZ={selected && tool === 'move'} onMouseDown={() => setDragging(true)} onObjectChange={constrainTransform} onMouseUp={commit}/>}
+      {selected && !disabled && (tool === 'rotate' ? <RotationRing target={group} position={object.position} radius={Math.max(1.4, Math.hypot(asset.baseDimensions.width, asset.baseDimensions.depth) * object.scale.x / 2 + 0.4)} onCommit={commit}/> : <TransformControls key={controlEpoch} object={group} mode={tool === 'move' ? 'translate' : 'scale'} space="local" size={1} showX showY={false} showZ={tool === 'move'} onMouseDown={() => setDragging(true)} onObjectChange={constrainTransform} onMouseUp={commit}/>)}
     </>);
 }

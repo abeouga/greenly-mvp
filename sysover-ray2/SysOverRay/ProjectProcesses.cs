@@ -9,11 +9,11 @@ namespace SysOverRay;
 internal sealed class ProjectProcesses(string projectRoot)
 {
     private readonly string _root = Path.GetFullPath(projectRoot).TrimEnd('\\', '/');
-    private sealed record Entry(int Id, string Created, string Command, string Name);
+    private sealed record Entry(int Id, string Created, string Command, string Name, string? ExecutablePath);
 
     private async Task<Entry[]> FindAsync()
     {
-        const string script = "@(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('powershell.exe','pwsh.exe','node.exe','uv.exe') } | ForEach-Object { @{ Id=[int]$_.ProcessId; Created=$_.CreationDate.ToUniversalTime().ToString('o'); Command=[string]$_.CommandLine; Name=$_.Name } }) | ConvertTo-Json -Compress";
+        const string script = "@(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('powershell.exe','pwsh.exe','node.exe','uv.exe','python.exe') } | ForEach-Object { @{ Id=[int]$_.ProcessId; Created=$_.CreationDate.ToUniversalTime().ToString('o'); Command=[string]$_.CommandLine; Name=$_.Name; ExecutablePath=[string]$_.ExecutablePath } }) | ConvertTo-Json -Compress";
         var info = new ProcessStartInfo("powershell.exe")
         {
             UseShellExecute = false, CreateNoWindow = true,
@@ -26,21 +26,39 @@ internal sealed class ProjectProcesses(string projectRoot)
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        await process.WaitForExitAsync(timeout.Token);
-        if (process.ExitCode != 0) throw new InvalidOperationException("Greenlyのプロセス確認に失敗しました。");
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            await process.WaitForExitAsync();
+            throw new TimeoutException("Kusakari Canvasのプロセス確認が15秒以内に終わりませんでした。");
+        }
+        if (process.ExitCode != 0) throw new InvalidOperationException("Kusakari Canvasのプロセス確認に失敗しました。");
         await error;
         var json = await output;
         if (string.IsNullOrWhiteSpace(json)) return [];
         using var document = JsonDocument.Parse(json);
-        var entries = document.RootElement.ValueKind == JsonValueKind.Array
-            ? JsonSerializer.Deserialize<Entry[]>(json)!
-            : [JsonSerializer.Deserialize<Entry>(json)!];
-        return entries.Where(IsProjectProcess).ToArray();
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+            return (JsonSerializer.Deserialize<Entry[]>(json) ?? []).Where(entry => entry is not null && IsProjectProcess(entry)).ToArray();
+        if (document.RootElement.ValueKind != JsonValueKind.Object) return [];
+        var entry = JsonSerializer.Deserialize<Entry>(json);
+        return entry is not null && IsProjectProcess(entry) ? [entry] : [];
     }
 
     private bool IsProjectProcess(Entry entry)
     {
         var command = entry.Command.Replace('/', '\\');
+        bool IsBackendPython()
+        {
+            if (string.IsNullOrWhiteSpace(entry.ExecutablePath)) return false;
+            var expected = Path.Combine(_root, "backend", ".venv", "Scripts", "python.exe");
+            return Path.GetFullPath(entry.ExecutablePath).Equals(expected, StringComparison.OrdinalIgnoreCase) &&
+                Regex.IsMatch(command, @"(?:^|\s)-m\s+kusakari_canvas_api(?:\s|$)", RegexOptions.IgnoreCase);
+        }
         bool ContainsPath(string suffix) => Regex.IsMatch(command,
             "(?:^|[\\s\"'])" + Regex.Escape(_root + suffix) + "(?=$|[\\s\"'])", RegexOptions.IgnoreCase);
         bool ContainsBackendPath() => ContainsPath("\\backend");
@@ -59,6 +77,7 @@ internal sealed class ProjectProcesses(string projectRoot)
             "powershell.exe" or "pwsh.exe" => IsLauncher(),
             "node.exe" => ContainsPath("\\node_modules\\.bin\\\\..\\vite\\bin\\vite.js") || ContainsPath("\\node_modules\\vite\\bin\\vite.js"),
             "uv.exe" => ContainsBackendPath() && Regex.IsMatch(command, @"(?:^|\s)run(?:\s|$)", RegexOptions.IgnoreCase),
+            "python.exe" => IsBackendPython(),
             _ => false
         };
     }
@@ -87,6 +106,6 @@ internal sealed class ProjectProcesses(string projectRoot)
             }
             await Task.Delay(500);
         }
-        if (await AnyAsync()) throw new InvalidOperationException("Greenlyのプロセスが残っています。ログを確認してください。");
+        if (await AnyAsync()) throw new InvalidOperationException("Kusakari Canvasのプロセスが残っています。ログを確認してください。");
     }
 }

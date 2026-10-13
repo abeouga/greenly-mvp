@@ -1,6 +1,6 @@
 {
-  "time": "2026-10-01T13:30:27.330772+00:00",
-  "database": "greenly_e2e",
+  "time": "2026-10-08T12:59:12.706747+00:00",
+  "database": "kusakari_canvas_e2e",
   "api_checks": [
     "HTTP CRUD envelope / 201 Location / 400 unknown-field and malformed JSON / 404 / 405",
     "PNG and JPEG photo byte-preserving roundtrip with objects and accumulated rotation",

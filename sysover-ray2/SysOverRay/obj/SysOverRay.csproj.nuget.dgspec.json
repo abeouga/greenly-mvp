@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj": {}
+    "C:\\Users\\t_abe\\Desktop\\greenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj": {}
   },
   "projects": {
-    "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj": {
+    "C:\\Users\\t_abe\\Desktop\\greenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj",
+        "projectUniqueName": "C:\\Users\\t_abe\\Desktop\\greenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj",
         "projectName": "SysOverRay",
-        "projectPath": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj",
-        "packagesPath": "C:\\Users\\hanam\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\hanam\\Desktop\\gleenly-mvp\\sysover-ray2\\SysOverRay\\obj\\",
+        "projectPath": "C:\\Users\\t_abe\\Desktop\\greenly-mvp\\sysover-ray2\\SysOverRay\\SysOverRay.csproj",
+        "packagesPath": "C:\\Users\\t_abe\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\t_abe\\Desktop\\greenly-mvp\\sysover-ray2\\SysOverRay\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\hanam\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\t_abe\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0-windows"
@@ -39,7 +39,7 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.300"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0-windows": {
@@ -64,7 +64,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Users\\t_abe\\AppData\\Local\\KusakariCanvas\\tools\\dotnet-sdk-10\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -355,6 +355,11 @@
             "System.Xml.XPath": "(,4.3.32767]",
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
+        }
+      },
+      "runtimes": {
+        "win-x64": {
+          "#import": []
         }
       }
     }

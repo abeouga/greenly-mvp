@@ -4,30 +4,34 @@ import secrets
 import shutil
 import socket
 import subprocess
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pymysql
 
-from greenly_api.config import REPO_ROOT
+from kusakari_canvas_api.config import REPO_ROOT
 
 
 def main() -> int:
-    executable = shutil.which("mysqld") or str(
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "MySQL/MySQL Server 8.0/bin/mysqld.exe")
-    if not Path(executable).is_file():
+    executable = os.environ.get("KUSAKARI_CANVAS_MYSQL_BIN")
+    executable = str(Path(executable) / "mysqld.exe") if executable else None
+    executable = executable if executable and Path(executable).is_file() else (
+        shutil.which("mysqld.exe") or shutil.which("mysqld"))
+    if not executable or not Path(executable).is_file():
         raise ValueError("Install MySQL Server or put mysqld on PATH to run isolated real-MySQL verification.")
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + "-" + secrets.token_hex(4)
-    default_root = Path("D:/GreenlyVerification") if Path("D:/").exists() else Path.home() / "GreenlyVerification"
-    root = Path(os.environ.get("GREENLY_VERIFICATION_ROOT", str(default_root))) / stamp
+    default_root = Path(tempfile.gettempdir()) / "kusakari-canvas-verification"
+    verification_root = Path(os.environ.get("KUSAKARI_CANVAS_VERIFICATION_ROOT", str(default_root)))
+    root = verification_root / stamp
     data = root / "data"
     root.mkdir(parents=True)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    print(f"Initializing isolated MySQL data directory: {data}", flush=True)
+    print("Initializing an isolated temporary MySQL instance.", flush=True)
     with (root / "mysql.log").open("w", encoding="utf-8") as log:
         initialized = subprocess.run([executable, "--no-defaults", "--initialize-insecure", f"--datadir={data}",
                                       "--console"], stdout=log, stderr=subprocess.STDOUT,
@@ -40,8 +44,9 @@ def main() -> int:
         connection = None
         verified_instance = False
         password = secrets.token_urlsafe(32)
-        results = {"time": datetime.now(UTC).isoformat(), "mysql_data_directory": str(data), "mysql_port": port,
-                   "database": "greenly_e2e", "existing_mysql_service_modified": False, "result": "failed"}
+        results = {"time": datetime.now(UTC).isoformat(), "mysql_port": port,
+                   "database": "kusakari_canvas_e2e", "existing_mysql_service_modified": False,
+                   "temporary_instance": True, "result": "failed"}
         try:
             deadline = time.monotonic() + 60
             while time.monotonic() < deadline:
@@ -63,14 +68,14 @@ def main() -> int:
                 verified_instance = True
                 results["mysql_version"] = version
                 cursor.execute("ALTER USER 'root'@'localhost' IDENTIFIED BY %s", (password,))
-                cursor.execute("CREATE DATABASE greenly_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+                cursor.execute("CREATE DATABASE kusakari_canvas_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
             connection.close()
             connection = None
             env = os.environ.copy()
-            env.update({"GREENLY_PROFILE": "e2e", "GREENLY_E2E_DB_USER": "root",
-                        "GREENLY_E2E_DB_PASSWORD": password,
-                        "GREENLY_E2E_DB_URL": f"mysql://127.0.0.1:{port}/greenly_e2e",
-                        "GREENLY_BACKUP_DIR": str(root / "backups")})
+            env.update({"KUSAKARI_CANVAS_PROFILE": "e2e", "KUSAKARI_CANVAS_E2E_DB_USER": "root",
+                        "KUSAKARI_CANVAS_E2E_DB_PASSWORD": password,
+                        "KUSAKARI_CANVAS_E2E_DB_URL": f"mysql://127.0.0.1:{port}/kusakari_canvas_e2e",
+                        "KUSAKARI_CANVAS_BACKUP_DIR": str(root / "backups")})
             npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
             if not npm:
                 raise ValueError("npm is missing.")
@@ -78,10 +83,16 @@ def main() -> int:
                 args = [os.environ.get("ComSpec", "cmd.exe"), "/d", "/s", "/c", f'npm run {task}'] \
                     if os.name == "nt" else [npm, "run", task]
                 print(f"Running {task} against isolated real MySQL at 127.0.0.1:{port}", flush=True)
-                code = subprocess.run(args, cwd=REPO_ROOT, env=env, creationflags=flags, check=False).returncode
+                task_log = root / f"{task.replace(':', '-')}.log"
+                with task_log.open("wb") as task_output:
+                    code = subprocess.run(args, cwd=REPO_ROOT, env=env, stdout=task_output, stderr=subprocess.STDOUT,
+                                          creationflags=flags, check=False).returncode
                 results[task] = code
                 if code:
+                    results["failed_task"] = task
+                    print(f"{task} failed; diagnostics are preserved with the temporary MySQL logs.", flush=True)
                     return code
+                print(f"{task} passed.", flush=True)
             results["result"] = "passed"
             return 0
         finally:
@@ -102,9 +113,17 @@ def main() -> int:
                 # This is only the child process started above, never the system MySQL service.
                 process.terminate()
                 process.wait(timeout=10)
+            results["isolated_mysql_stopped"] = process.poll() is not None
+            log.flush()
+            log.close()
+            if results["result"] == "passed" and results["isolated_mysql_stopped"]:
+                resolved_root = root.resolve()
+                if resolved_root.parent != verification_root.resolve() or resolved_root.name != stamp:
+                    raise RuntimeError("Refusing to remove a temporary directory outside this verification run.")
+                shutil.rmtree(resolved_root)
+                results["temporary_instance_cleaned"] = True
             output = REPO_ROOT / "artifacts/fastapi"
             output.mkdir(parents=True, exist_ok=True)
-            results["isolated_mysql_stopped"] = process.poll() is not None
             (output / "isolated-mysql-verification.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
 
 

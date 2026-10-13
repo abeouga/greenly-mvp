@@ -1,8 +1,8 @@
 {
   "result": "passed",
-  "test": "GreenlyController real start/stop/restart with occupied preferred ports",
+  "test": "KusakariCanvasController real start/stop/restart with occupied preferred ports",
   "overlaySource": "sysover-ray2/SysOverRay",
-  "greenlyRoot": "gleenly-mvp",
+  "kusakari_canvasRoot": "gleenly-mvp",
   "observations": [
     {
       "step": "baseline",

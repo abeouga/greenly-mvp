@@ -2,12 +2,12 @@
 
 ## Context
 
-このリポジトリは空の新規構成です。初期MVPでは人が編集するGardenDocumentを中心にし、AI、認証基盤、クラウド、物理エンジンは導入しません。
+この文書は、Kusakari EC内の3D庭づくり機能（Kusakari Canvas）のローカル試作に関する実装契約です。利用者向けのサービス境界はKusakari ECであり、このリポジトリは庭データの編集・表示・保存を担う技術試作です。初期MVPでは人が編集するGardenDocumentを中心にし、AI、認証基盤、クラウド、物理エンジンは導入しません。商品、価格、在庫、カート、注文の契約はKusakari側の設計資料を正本とします。
 
 ## Decision
 
-- Frontend: React 19 + TypeScript + Vite、R3F 9 + Drei 10、Zustand、TanStack Query。Viteの `/api` proxyで同一オリジン通信します。
-- Backend: Python 3.12、FastAPI、Pydantic v2、同期SQLAlchemy 2、PyMySQL、MySQL、Alembic。`dev`/`e2e` profileのデモ利用者はサーバー側固定値で、`GREENLY_HOST=127.0.0.1` に制限します。移行判断と旧DB引き継ぎは`docs/fastapi-migration.md`に記録します。
+- Frontend: React 19 + JavaScript/JSX + Vite、R3F 9 + Drei 10、Zustand、TanStack Query。Viteの `/api` proxyで同一オリジン通信します。
+- Backend: Python 3.12、FastAPI、Pydantic v2、同期SQLAlchemy 2、PyMySQL、MySQL、Alembic。`dev`/`e2e` profileのデモ利用者はサーバー側固定値で、`KUSAKARI_CANVAS_HOST=127.0.0.1` に制限します。移行判断と旧DB引き継ぎは`docs/fastapi-migration.md`に記録します。
 - 保存形式: `{schemaVersion:1,id,revision,name,width,depth,objects,photo}`。`photo`は`null`または元画像・内部の変換基準四隅・多角形輪郭です。新しい輪郭の四隅は外接矩形から自動生成し、ユーザーが別途4点をクリックする入力段階はありません。旧保存データの基準は輪郭編集前まで保持します。`revision`は同時更新制御、`schemaVersion`は形式識別です。写真追加は既存形式の任意項目として扱います。
 - 単位: Three.js 1 unit = 1m。X/Zだけ庭の中心からの座標、配置Y=0、回転はY軸ラジアン、scaleはxyz同値の0.25..3です。
 - 配置アセットIDは `tree_oak`, `shrub_boxwood`, `brick_paver`, `bench_wood` とし、GLBはリポジトリへ同梱します。生成元はこのリポジトリの基本形状スクリプトです。

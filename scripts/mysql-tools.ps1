@@ -1,26 +1,80 @@
 ﻿$ErrorActionPreference = 'Stop'
 
-function Get-GreenlyMySqlBin {
+. (Join-Path $PSScriptRoot 'paths.ps1')
+
+function Get-InstalledKusakariCanvasMySqlBins {
+  $directories = @()
+  $command = Get-Command mysqld.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -ne $command) { $directories += Split-Path -Parent $command.Source }
+
+  try {
+    $services = Get-CimInstance Win32_Service -ErrorAction Stop |
+      Where-Object { $_.PathName -match '(?i)mysqld\.exe' }
+    foreach ($service in $services) {
+      $servicePath = [Environment]::ExpandEnvironmentVariables($service.PathName)
+      $executable = $null
+      if ($servicePath -match '^\s*"(?<path>[^"]*mysqld\.exe)"') {
+        $executable = $Matches['path']
+      } elseif ($servicePath -match '^\s*(?<path>.*?mysqld\.exe)(?:\s|$)') {
+        $executable = $Matches['path']
+      }
+      if (-not [string]::IsNullOrWhiteSpace($executable) -and
+          (Test-Path -LiteralPath $executable -PathType Leaf)) {
+        $directories += Split-Path -Parent $executable
+      }
+    }
+  } catch {
+    # PATH and the standard install roots remain available if service discovery is denied.
+  }
+
+  $programRoots = @(
+    $env:ProgramFiles,
+    ${env:ProgramFiles(x86)},
+    [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+  foreach ($programRoot in $programRoots) {
+    $mysqlRoot = Join-Path $programRoot 'MySQL'
+    if (-not (Test-Path -LiteralPath $mysqlRoot -PathType Container)) { continue }
+    $directories += Get-ChildItem -LiteralPath $mysqlRoot -Directory -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like 'MySQL Server *' } |
+      ForEach-Object { Join-Path $_.FullName 'bin' }
+  }
+
+  return @($directories | Select-Object -Unique)
+}
+
+function Get-KusakariCanvasMySqlBin {
   param([switch]$Portable)
-  $installed = Get-Command mysqld.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not [string]::IsNullOrWhiteSpace($env:KUSAKARI_CANVAS_MYSQL_BIN)) {
+    $repoRoot = Get-KusakariCanvasRepoRoot -StartPath $PSScriptRoot
+    $configuredBin = Resolve-KusakariCanvasPath -Path $env:KUSAKARI_CANVAS_MYSQL_BIN -BasePath $repoRoot
+    foreach ($name in @('mysql.exe', 'mysqld.exe', 'mysqldump.exe')) {
+      if (-not (Test-Path -LiteralPath (Join-Path $configuredBin $name) -PathType Leaf)) {
+        throw "KUSAKARI_CANVAS_MYSQL_BINに必要な実行ファイルがありません: $name"
+      }
+    }
+    return $configuredBin
+  }
   $candidates = @()
-  $stateRoot = if ($env:GREENLY_SETUP_HOME) { $env:GREENLY_SETUP_HOME } else { Join-Path $env:LOCALAPPDATA 'Greenly\mysql' }
+  $repoRoot = Get-KusakariCanvasRepoRoot -StartPath $PSScriptRoot
+  $canvasHome = Get-KusakariCanvasHome -RepoRoot $repoRoot
+  $stateRoot = Join-Path $canvasHome 'mysql'
   $stateFile = Join-Path $stateRoot 'instance.json'
   if (Test-Path -LiteralPath $stateFile) {
-    $state = Get-Content -Raw -LiteralPath $stateFile | ConvertFrom-Json
+    try { $state = Get-Content -Raw -LiteralPath $stateFile | ConvertFrom-Json }
+    catch { throw "MySQLの保存済み設定を読み取れません。$stateFile を確認してください。" }
+    if ([string]::IsNullOrWhiteSpace($state.executable)) { throw "MySQLの保存済み設定に実行ファイルのパスがありません: $stateFile" }
     $candidates += Split-Path -Parent $state.executable
   }
   if (-not $Portable) {
-    if ($null -ne $installed) { $candidates += Split-Path -Parent $installed.Source }
-    foreach ($version in @('8.4', '8.0')) {
-      $candidates += Join-Path $env:ProgramFiles "MySQL\MySQL Server $version\bin"
-    }
+    $candidates += Get-InstalledKusakariCanvasMySqlBins
   }
   $version = '8.4.11'
-  $tools = Join-Path $env:LOCALAPPDATA "Greenly\tools\mysql-$version-winx64"
+  $tools = Join-Path $canvasHome "tools\mysql-$version-winx64"
   $candidates += Join-Path $tools 'bin'
   foreach ($candidate in $candidates) {
-    if ((Test-Path -LiteralPath (Join-Path $candidate 'mysqld.exe')) -and
+    if ((Test-Path -LiteralPath (Join-Path $candidate 'mysql.exe')) -and
+        (Test-Path -LiteralPath (Join-Path $candidate 'mysqld.exe')) -and
         (Test-Path -LiteralPath (Join-Path $candidate 'mysqldump.exe'))) {
       return $candidate
     }
@@ -29,24 +83,35 @@ function Get-GreenlyMySqlBin {
   $architecture = $env:PROCESSOR_ARCHITEW6432
   if (-not $architecture) { $architecture = $env:PROCESSOR_ARCHITECTURE }
   if ($architecture -ne 'AMD64') { throw 'MySQL自動導入はWindows x64に対応しています。' }
-  $downloads = Join-Path $env:LOCALAPPDATA 'Greenly\downloads'
+  $downloads = Join-Path $canvasHome 'downloads'
   New-Item -ItemType Directory -Path $downloads -Force | Out-Null
   $archive = Join-Path $downloads "mysql-$version-winx64.zip"
   $expected = 'A492371D687D2BAB088B0062581144A0044B8964BAEFDF4FAA579292B423D25C'
   if (-not (Test-Path -LiteralPath $archive)) {
-    Write-Host "Greenly専用MySQL ${version}を公式配布元から取得します。"
+    Write-Host "Kusakari Canvas用MySQL ${version}を公式配布元から取得します。"
     $partial = "$archive.part"
     $uri = "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-$version-winx64.zip"
-    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-      & curl.exe --fail --location --retry 2 --connect-timeout 30 --output $partial $uri
-      if ($LASTEXITCODE -ne 0) { throw 'MySQL配布物を取得できませんでした。ネット接続を確認して再実行してください。' }
-    } else {
-      Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $partial -TimeoutSec 900
+    Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+    try {
+      if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+        & curl.exe --fail --location --retry 2 --connect-timeout 30 --output $partial $uri
+        if ($LASTEXITCODE -ne 0) { throw 'MySQL配布物を取得できませんでした。ネット接続を確認して再実行してください。' }
+      } else {
+        Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $partial -TimeoutSec 900
+      }
+      if (-not (Test-Path -LiteralPath $partial -PathType Leaf)) { throw 'MySQL配布物が保存されませんでした。' }
+      if ((Get-FileHash -LiteralPath $partial -Algorithm SHA256).Hash -ne $expected) {
+        throw 'MySQL配布物のSHA-256が一致しません。取得ファイルを確認して再実行してください。'
+      }
+      Move-Item -LiteralPath $partial -Destination $archive -Force
+    } catch {
+      Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+      throw
     }
-    Move-Item -LiteralPath $partial -Destination $archive -Force
   }
   if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $expected) {
-    throw "MySQL配布物のSHA-256が一致しません。取得ファイルを確認してください: $archive"
+    Remove-Item -LiteralPath $archive -Force
+    throw 'MySQL配布物の保存済みSHA-256が一致しません。破損した取得ファイルを削除しました。setup.ps1を再実行してください。'
   }
 
   $stage = Join-Path $downloads ('mysql-extract-' + [guid]::NewGuid().ToString('N'))
@@ -72,13 +137,15 @@ function Get-GreenlyMySqlBin {
   return (Join-Path $tools 'bin')
 }
 
-function Initialize-GreenlyMySqlRuntime {
+function Initialize-KusakariCanvasMySqlRuntime {
   param([string]$Bin)
   $key = 'HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64'
   $runtime = Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue
   if ($runtime.Installed -ne 1 -or $runtime.Major -lt 14 -or ($runtime.Major -eq 14 -and $runtime.Minor -lt 29)) {
     Write-Host 'MySQLに必要なMicrosoft Visual C++ランタイムを導入します。Windowsの管理者確認が表示される場合があります。'
-    $installer = Join-Path $env:LOCALAPPDATA 'Greenly\downloads\vc_redist.x64.exe'
+    $repoRoot = Get-KusakariCanvasRepoRoot -StartPath $PSScriptRoot
+    $canvasHome = Get-KusakariCanvasHome -RepoRoot $repoRoot
+    $installer = Join-Path $canvasHome 'downloads\vc_redist.x64.exe'
     New-Item -ItemType Directory -Path (Split-Path -Parent $installer) -Force | Out-Null
     Invoke-WebRequest -UseBasicParsing -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile $installer -TimeoutSec 300
     $signature = Get-AuthenticodeSignature -LiteralPath $installer

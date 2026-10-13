@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page, type APIRequestContext } from '@playwright/test';
+import { api as apiBase } from './api-url.js';
 import type { GardenDocument } from '../frontend/src/types/garden.js';
 
-const apiBase = 'http://127.0.0.1:18080/api';
 const artifactDirectory = resolve('artifacts/e2e');
 const corners = [[0.1, 0.85], [0.9, 0.85], [0.8, 0.2], [0.2, 0.2]];
 const outline = [[0.15, 0.8], [0.8, 0.8], [0.75, 0.55], [0.65, 0.55], [0.6, 0.25], [0.25, 0.25]];

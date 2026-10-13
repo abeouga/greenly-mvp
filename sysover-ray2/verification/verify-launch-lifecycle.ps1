@@ -63,13 +63,13 @@ function Invoke-Control([string]$Id, [string]$Expected) {
 }
 
 function Healthy-Session([string]$Step) {
-    if ((Element 'SummaryText').Current.Name -ne 'Greenly 稼働中') { throw 'Overlay does not report both services healthy.' }
+    if ((Element 'SummaryText').Current.Name -ne 'Kusakari Canvas 稼働中') { throw 'Overlay does not report both services healthy.' }
     $apiPort = [int]([regex]::Match((Element 'BackendLabel').Current.Name, '\d+').Value)
     $webPort = [int]([regex]::Match((Element 'FrontendLabel').Current.Name, '\d+').Value)
     $api = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$apiPort/api/assets" -TimeoutSec 10
     $web = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$webPort/" -TimeoutSec 10
     $proxy = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$webPort/api/assets" -TimeoutSec 10
-    if ($api.StatusCode -ne 200 -or $api.Headers['X-Greenly-Backend'] -ne 'fastapi' -or $web.Content -notmatch 'Greenly' -or $proxy.StatusCode -ne 200) { throw 'Real API/Web/proxy health verification failed.' }
+    if ($api.StatusCode -ne 200 -or $api.Headers['X-Kusakari-Canvas-Backend'] -ne 'fastapi' -or $web.Content -notmatch 'Kusakari Canvas' -or $proxy.StatusCode -ne 200) { throw 'Real API/Web/proxy health verification failed.' }
     $ids = @(($api.Content | ConvertFrom-Json) | ForEach-Object id)
     foreach ($id in 'tree_oak','shrub_boxwood','brick_paver','bench_wood') { if ($ids -notcontains $id) { throw "Asset missing: $id" } }
     $listeners = @(Get-NetTCPConnection -State Listen | Where-Object LocalPort -In @($apiPort,$webPort) | Select-Object LocalPort,OwningProcess -Unique)

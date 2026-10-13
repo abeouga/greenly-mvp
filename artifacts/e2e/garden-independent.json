@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "e081f637-f443-4793-8de3-e6bac4fb96aa",
+  "id": "655723f0-8c87-487f-b4b3-6578ce0c4c71",
   "revision": 2,
-  "name": "E2E independent 1790944172816",
+  "name": "E2E independent 1791718261575",
   "width": 10,
   "depth": 8,
   "objects": [
     {
-      "id": "288ed9a1-1026-437e-bae7-55298adcffbf",
+      "id": "4ceea587-9c5b-416a-9b99-9c9f95240943",
       "assetId": "tree_oak",
       "position": {
         "x": -1.5,
         "y": 0,
-        "z": -0.0000011111111148790539
+        "z": -0.0000011111111148810054
       },
       "rotation": {
         "x": 0,
@@ -26,12 +26,12 @@
       }
     },
     {
-      "id": "382e8707-31ca-4a54-802b-58db229d0e9e",
+      "id": "670dd4d5-31d0-4824-a46a-ebd0fbaaef24",
       "assetId": "tree_oak",
       "position": {
-        "x": 4.719992182079325,
+        "x": 3.871530949756345,
         "y": 0,
-        "z": -0.0000011111111148688624
+        "z": -0.0000011111111148684287
       },
       "rotation": {
         "x": 0,

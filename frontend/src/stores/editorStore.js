@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { addObject, changeObjectTransform, createPlacedObject, duplicateObject, removeObject } from '../domain/gardenEditing';
 import { validSurface, withPhotoBoundary } from '../domain/photoProjection';
 import { dimensionError } from '../domain/gardenDimensions';
+import { scalePhotoFromEdge } from '../domain/photoScale';
 export const useEditorStore = create((set, get) => ({
     document: null,
     selectedObjectId: null,
@@ -47,6 +48,17 @@ export const useEditorStore = create((set, get) => ({
             return true;
         set({ document: { ...state.document, width, depth }, isDirty: true, saveError: null, editError: null });
         return true;
+    },
+    setPhotoEdgeLength: (index, length) => {
+        const state = get();
+        if (!state.document?.photo || state.isSaving || state.isCalibrating || state.isTransformDragging || state.photoBoundaryDraft !== null)
+            return '保存・カメラ設定・輪郭編集・配置物の移動が終わってから変更してください。';
+        const result = scalePhotoFromEdge(state.document, index, length);
+        if (result.error)
+            return result.error;
+        if (result.document !== state.document)
+            set({ document: result.document, isDirty: true, saveError: null, editError: null });
+        return null;
     },
     setPhoto: (photo) => {
         const state = get();
@@ -127,6 +139,31 @@ export const useEditorStore = create((set, get) => ({
             editError: null,
             saveError: null,
         });
+    },
+    setAssetQuantity: (assetId, quantity) => {
+        const state = get();
+        if (!state.document || state.isSaving || state.isCalibrating || state.isTransformDragging || state.photoBoundaryDraft !== null) return;
+        const matching = state.document.objects.filter((object) => object.assetId === assetId);
+        if (!Number.isInteger(quantity) || quantity < 0 || quantity > 200 || state.document.objects.length - matching.length + quantity > 200) {
+            set({ editError: '数量は0〜200の整数、配置の合計は200個までです。' });
+            return;
+        }
+        if (matching.length === 0 || matching.length === quantity) return;
+        let next = state.document;
+        if (quantity < matching.length) {
+            const removeIds = new Set(matching.slice(quantity).map((object) => object.id));
+            next = { ...next, objects: next.objects.filter((object) => !removeIds.has(object.id)) };
+        } else {
+            while (next.objects.filter((object) => object.assetId === assetId).length < quantity) {
+                const duplicated = duplicateObject(next, matching[0].id);
+                if (!duplicated) { set({ editError: '数量を増やせません。配置上限を確認してください。' }); return; }
+                next = duplicated;
+            }
+        }
+        const ids = new Set(next.objects.map((object) => object.id));
+        let selectedObjectId = state.selectedObjectId;
+        if (!ids.has(selectedObjectId)) selectedObjectId = null;
+        set({ document: next, selectedObjectId, loadedModelIds: state.loadedModelIds.filter((id) => ids.has(id)), failedModelIds: state.failedModelIds.filter((id) => ids.has(id)), isDirty: true, editError: null, saveError: null });
     },
     setSaving: (isSaving) => set({ isSaving }),
     setTransformDragging: (isTransformDragging) => set({ isTransformDragging }),

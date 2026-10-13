@@ -1,0 +1,20 @@
+{
+  "bytesBefore": 560360,
+  "bytesAfter": 178344,
+  "reductionPercent": 68.2,
+  "maximumPositionErrorMeters": 2.7924769255616155e-05,
+  "triangles": 5422,
+  "meshes": 2,
+  "materials": 2,
+  "textures": 2,
+  "dimensionsMeters": [
+    2,
+    4,
+    2
+  ],
+  "requiredExtensions": [
+    "KHR_mesh_quantization",
+    "EXT_texture_webp"
+  ],
+  "foliageAlphaMode": "MASK"
+}

@@ -1,9 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { api } from './api-url.js';
 import type { GardenDocument } from '../frontend/src/types/garden.js';
-
-const api = 'http://127.0.0.1:18080/api';
 
 test('S. 作業面・独立開閉・ダイアログのフォーカス・未保存確認', async ({ page, request }) => {
   const created = await (await request.post(`${api}/gardens`, { data: { name: `E2E workspace ${Date.now()}` } })).json() as GardenDocument;
@@ -60,7 +59,7 @@ test('S. 作業面・独立開閉・ダイアログのフォーカス・未保�
     await expect(page.getByTestId('save-status')).toHaveText('保存済み');
 
     await page.getByTestId('position-x').fill('1.7');
-    const back = page.getByRole('button', { name: 'Greenly 庭一覧へ', exact: true });
+    const back = page.getByRole('button', { name: '← 庭一覧', exact: true });
     await back.click();
     await expect(page.getByRole('dialog', { name: '変更を保存せずに戻りますか？' })).toBeVisible();
     await expect(page.getByRole('button', { name: '編集を続ける' })).toBeFocused();

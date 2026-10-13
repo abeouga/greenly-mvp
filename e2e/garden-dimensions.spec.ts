@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { api } from './api-url.js';
 import type { GardenDocument } from '../frontend/src/types/garden.js';
 
 test('Q. 名前だけで作成・土台寸法を編集・縮小検証・MySQL保存復元', async ({ page, request }) => {
-  const api = 'http://127.0.0.1:18080/api';
   const directory = resolve('artifacts/e2e');
   await mkdir(directory, { recursive: true });
   await page.goto('/');

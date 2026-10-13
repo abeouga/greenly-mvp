@@ -1,23 +1,17 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const output = resolve(root, 'frontend/public/models');
 await mkdir(output, { recursive: true });
+// The Blender-authored tree is tracked separately; never replace it with basic shapes.
+await access(resolve(output, 'tree-oak.glb'));
 
 const box = (color, translation, scale) => ({ shape: 'box', color, translation, scale });
 const sphere = (color, translation, scale) => ({ shape: 'sphere', color, translation, scale });
-const cylinder = (color, translation, scale) => ({ shape: 'cylinder', color, translation, scale });
 
 const assets = [
-  {
-    file: 'tree-oak.glb',
-    parts: [
-      cylinder('#80603b', [0, 1, 0], [0.36, 2, 0.36]),
-      sphere('#4f7f45', [0, 3, 0], [2, 2, 2]),
-    ],
-  },
   {
     file: 'shrub-boxwood.glb',
     parts: [
@@ -138,7 +132,7 @@ function makeGlb(parts) {
 
   const binary = Buffer.concat(binaryChunks);
   const document = {
-    asset: { version: '2.0', generator: 'Greenly basic-shape asset generator' },
+    asset: { version: '2.0', generator: 'Kusakari Canvas basic-shape asset generator' },
     scene: 0,
     scenes: [{ nodes: nodes.map((_, index) => index) }],
     nodes,

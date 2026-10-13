@@ -1,4 +1,4 @@
-# Greenlyオーバーレイの停止対象
+# Kusakari Canvasオーバーレイの停止対象
 
 ## Context
 

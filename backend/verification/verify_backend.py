@@ -7,14 +7,14 @@ import time
 import traceback
 from datetime import UTC, datetime
 
-from greenly_api.config import BACKEND_ROOT, REPO_ROOT, Settings
+from kusakari_canvas_api.config import BACKEND_ROOT, REPO_ROOT, Settings
 
 from .verify_api import request, verify_api
 from .verify_migrations import verify_migrations
 
 
 def main() -> int:
-    os.environ["GREENLY_PROFILE"] = "e2e"
+    os.environ["KUSAKARI_CANVAS_PROFILE"] = "e2e"
     settings = Settings.from_env()
     output = REPO_ROOT / "artifacts/fastapi"
     output.mkdir(parents=True, exist_ok=True)
@@ -24,11 +24,11 @@ def main() -> int:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
     env = os.environ.copy()
-    env["GREENLY_PORT"] = str(port)
-    env["GREENLY_HOST"] = "127.0.0.1"
+    env["KUSAKARI_CANVAS_PORT"] = str(port)
+    env["KUSAKARI_CANVAS_HOST"] = "127.0.0.1"
     base = f"http://127.0.0.1:{port}"
     with (output / "api-verification.log").open("w", encoding="utf-8") as log:
-        process = subprocess.Popen([sys.executable, "-m", "greenly_api", "serve"], cwd=BACKEND_ROOT,
+        process = subprocess.Popen([sys.executable, "-m", "kusakari_canvas_api", "serve"], cwd=BACKEND_ROOT,
                                    env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 45

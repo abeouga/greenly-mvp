@@ -1,0 +1,37 @@
+/* 狭い画面では編集領域、素材、プロパティを縦に並べます。 */
+@media (max-width: 768px) {
+  body { min-width: 0; }
+  .page-shell { padding: 0 16px; }
+  .brand-header { height: auto; min-height: 90px; flex-wrap: wrap; gap: 12px; padding: 16px 0; }
+  .brand-header .brand-heading { display: none; }
+  .brand-header .version-tag { display: none; }
+  .brand-header .ec-return-link { margin-left: auto; }
+  .garden-list-layout { padding: 24px 0; }
+  .projects-intro { margin-bottom: 24px; }
+  .create-panel { display: block; padding: 20px; margin-bottom: 28px; }
+  .create-form { grid-template-columns: minmax(0, 1fr) auto; }
+  .garden-cards { grid-template-columns: minmax(0, 1fr); }
+  .garden-card-open { padding: 20px; }
+  .editor-shell { height: auto; min-height: 100dvh; }
+  .document-bar { flex: none; flex-wrap: wrap; gap: 10px; padding: 12px; }
+  .editor-brand { padding-right: 10px; font-size: 17px; }
+  .document-title { order: 3; width: 100%; }
+  .document-title h1 { max-width: 100%; margin: 0; }
+  .toolbar-status { margin-left: 0; }
+  .save-button { margin-left: auto; }
+  .editor-layout, .editor-layout.inspector-hidden { display: flex; flex-direction: column; }
+  .canvas-column { flex: none; height: 540px; }
+  .canvas-tools { flex: none; flex-wrap: wrap; gap: 8px; padding: 10px; }
+  .camera-actions { flex-wrap: wrap; margin-left: 0; }
+  .canvas-footer { flex-wrap: wrap; flex-basis: auto; gap: 5px; padding: 8px; }
+  .canvas-tool-hint { white-space: normal; }
+  .catalog-panel { order: 1; padding: 10px; }
+  .catalog-heading { gap: 10px; }
+  .catalog-heading > span { display: none; }
+  .properties-panel { order: 2; border-left: 0; border-top: 1px solid var(--line); max-height: 520px; }
+  .photo-toolbar { flex-wrap: wrap; height: auto; }
+  .calibration-layout { grid-template-columns: minmax(0, 1fr); }
+  .calibration-settings { max-height: none; }
+  .plan-quantity-row { gap: 8px; }
+  .plan-actions button { flex: 1 1 145px; min-height: 44px; }
+}

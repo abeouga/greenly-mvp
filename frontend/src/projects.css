@@ -32,7 +32,7 @@
 .delete-garden:hover { color: var(--danger); background: #fbf1ed; }
 .empty-message { padding: 48px 24px; border: 1px dashed #d7e2ca; border-radius: 8px; text-align: center; color: #8ea07e; font-size: 12px; }
 .empty-message .button { margin-top: 12px; }
-.page-footer { display: flex; align-items: center; gap: 14px; padding: 22px 0; border-top: 1px solid var(--line); color: #8d9e7e; font-size: 11px; }
+.page-footer { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 22px 0; border-top: 1px solid var(--line); color: #8d9e7e; font-size: 11px; }
 .page-footer span { color: #a4b196; font-size: 10px; }
 @media (max-width: 1100px) { .page-shell { padding: 0 28px; } .garden-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .create-panel { gap: 24px; padding: 24px; } .create-form { grid-template-columns: minmax(170px, 1fr) auto; } }
 

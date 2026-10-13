@@ -1,12 +1,10 @@
 export function AssetPreview({ assetId }) {
+    if (assetId === 'tree_oak') {
+        return <img className="asset-preview preview-tree_oak" src="/icons/tree-oak.webp" alt="" aria-hidden="true" width="160" height="160" loading="lazy"/>;
+    }
     return <svg className={`asset-preview preview-${assetId}`} viewBox="0 0 80 70" aria-hidden="true">
     <ellipse cx="40" cy="59" rx="25" ry="5" fill="#1f352814"/>
-    {assetId === 'tree_oak' ? <>
-      <path d="M37 27h6v31l-3 3-3-3Z" fill="#88684c"/>
-      <path d="m40 3 19 10 8 22-10 15-31-2-13-17 10-21Z" fill="#678372"/>
-      <path d="m40 3 4 25 23 7-10-22ZM44 28l13 22-31-2Z" fill="#4c705c"/>
-      <path d="m23 10 21 18-31 3Z" fill="#8ba38b"/>
-    </> : assetId === 'shrub_boxwood' ? <>
+    {assetId === 'shrub_boxwood' ? <>
       <path d="m40 21 24 11 5 19-28 12-28-13 4-20Z" fill="#8c9d6b"/>
       <path d="m40 21 1 23 23-12 5 19-28 12Z" fill="#6f8658"/>
       <path d="m17 30 24 14-28 6Z" fill="#a6b487"/>

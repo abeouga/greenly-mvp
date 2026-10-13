@@ -1,33 +1,44 @@
-# Greenly 専用起動オーバーレイ
+# Kusakari Canvas 専用起動オーバーレイ
 
-## 初回セットアップと起動
+Kusakari EC内の3D庭づくり機能をローカル起動するためのWindowsオーバーレイです。ECとは開発用プロセスを分けていますが、利用者向けの独立サービスではありません。
 
-リポジトリ直下の `setup.bat` を一度実行すると、.NET 10 Desktop Runtimeをユーザー領域へ準備し、デスクトップに `Greenly SysOverRay` ショートカットを作成します。PowerShellからはリポジトリ直下の `setup.ps1` を実行できます。
+## セットアップと起動
 
-その後はデスクトップのショートカット、またはこのフォルダーの `start.bat` を使います。PowerShellからは `start.ps1` を実行できます。フォルダーを移動しても、設定と実行ファイルはスクリプトの場所から解決します。オーバーレイは右上に表示され、GreenlyのAPI/Web状態とポート番号を示します。起動コマンドを実行するたびに、このフォルダーの既存オーバーレイを終了して新しいプロセスを前面に表示します。実画面の表示と起動・停止・再起動ボタンを確認できた場合だけcmdを閉じます。失敗時はエラーを表示してキー入力を待ちます。
+初回はリポジトリ直下の `setup.bat` を実行してください。.NET 10 Desktop Runtimeを確認し、デスクトップに `Kusakari Canvas SysOverRay` ショートカットを作成します。以後はそのショートカット、または `sysover-ray2\start.bat` を使います。PowerShellからはリポジトリ直下の `start.ps1`、または `sysover-ray2\start.ps1` を実行できます。
 
-## 配置
+SysOverRayの配布ファイルを作り直す場合は、`sysover-ray2`で次を実行します。開発側には.NET 10 SDKが必要です。利用者側はセットアップが.NET 10 Desktop Runtimeを確認し、不足時にユーザー領域へ導入します。
 
-このフォルダーはリポジトリ内の `sysover-ray2` にあります。実行ファイルは `app\SysOverRay.exe`、設定は `app\overlay-settings.json` にあります。設定のGreenlyパスは実行ファイル位置を基準に `..\\..` とし、カレントディレクトリに依存しません。絶対パスを含む既存ショートカットはなくし、セットアップ時に現在のクローン位置を指すショートカットを作成します。詳細は [SysOverRay\README.md](SysOverRay/README.md) を参照してください。
+```powershell
+dotnet publish .\SysOverRay\SysOverRay.csproj -c Release -r win-x64 --self-contained false -o .\app
+```
 
-## 動作境界
+設定は実行ファイルの場所を基準に読み込みます。リポジトリ一式を移動する場合は内部のフォルダー構成を維持してください。セットアップは `Kusakari Canvas SysOverRay` ショートカットを作成します。プロジェクト移動後は、新しい場所で `setup.bat` を実行してショートカットを更新してください。
 
-停止・再起動は、設定されたGreenlyフォルダーの起動スクリプト、Vite、バックエンド用uvの実行引数を照合して、そのプロセスツリーを対象にします。`start.bat`からの既存起動分と、オーバーレイを開き直す前からの起動分も操作できます。同じフォルダーで複数起動している場合はまとめて停止します。起動ボタンも既存の対象プロセスを停止してから新規に起動します。起動に失敗した場合も対象プロセスを片付けます。MySQLサービスは停止しません。
+## 動作
 
-## 検証の再実行
+- 起動時にKusakari CanvasのAPIとWebを確認し、正常なAPIが既に動いていれば再利用します。
+- 停止・再起動では設定したリポジトリの起動スクリプト、Vite、uvのプロセスだけを照合します。ポート番号だけを根拠に他のプロジェクトを終了しません。
+- 起動に失敗した場合は、今回起動したプロセスを停止します。MySQLサービスは停止しません。
+- Web・APIのポート候補はそれぞれ5173〜5199、8080・18081〜18100です。使用中ポートを避けて起動し、選択結果を画面に表示します。
 
-PowerShellでこのフォルダーへ移動し、次を実行します。実際のGreenly `start.ps1` とローカルAPIを使い、起動、停止、停止後の起動、再起動、最終停止を確認します。GreenlyのMySQLと依存関係が先に起動している必要があります。
+## 設定とログ
+
+`app\overlay-settings.json` の `ProjectRoot` は、SysOverRayの実行ファイルからKusakari Canvasのリポジトリルートへの相対パスです。停止要求には `KUSAKARI_CANVAS_STOP_REQUEST_PATH` を使います。
+
+ツールと専用MySQLは `%LOCALAPPDATA%\KusakariCanvas`、オーバーレイ位置とログはWindowsのLocalAppData配下に保存します。`KUSAKARI_CANVAS_HOME` でツールと専用MySQLの保存先を変更できます。相対パスはプロジェクトルート基準です。`KUSAKARI_CANVAS_HOME` の変更だけでは既存のmanaged MySQLデータは移動しません。以前のGreenly名の保存先は自動では読み込みません。
+
+## 検証
+
+SysOverRayフォルダーで実APIを使う起動・停止・再起動確認を行う場合:
 
 ```powershell
 dotnet run --project .\verification\LifecycleProbe\LifecycleProbe.csproj -c Release
 ```
 
-このコマンドの結果は `verification\lifecycle-report.json` に保存します。現在残っている同ファイルは前の版の検証記録です。実画面での停止・再起動・オーバーレイ再表示後の検証は `verification\ui-check.md` と `verification\ui-control-report.json` に記録しています。起動時の空きポートはその時点の使用状況で変わります。
-
-## start.batと実画面の検証
+`start.bat`から実画面と操作ボタンを確認する場合:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\verification\verify-launch-lifecycle.ps1
 ```
 
-指定のstart.batから実画面を開き、UIの起動、起動による既存プロセスの置換、停止、停止後の起動、再起動、オーバーレイ置換後の再起動を確認します。API・Web・Web経由APIのHTTP応答、旧プロセス終了、停止後のLISTEN消失を検査し、結果を `verification\launch-lifecycle-report.json`、画面を `verification\launch-*.png` に保存します。最後はオーバーレイとGreenlyを起動状態にします。
+後者は実API・Web・Web経由API、起動プロセスの置換、停止後のLISTEN消失を確認します。検証後はオーバーレイとKusakari Canvasを起動状態にします。

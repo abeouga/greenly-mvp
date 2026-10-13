@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/http';
 import { gardenApi } from '../api/gardens';
 import { GardenHeader } from '../components/GardenHeader';
-import { GreenlyIcon } from '../components/GreenlyIcon';
+import { SiteHeader } from '../components/SiteHeader';
 import { CatalogPanel } from '../components/CatalogPanel';
 import { PropertiesPanel } from '../components/PropertiesPanel';
 import { GardenDimensions } from '../components/GardenDimensions';
@@ -13,6 +13,7 @@ import { PhotoOverlay } from '../components/PhotoOverlay';
 import { validSurface } from '../domain/photoProjection';
 import { calibratedBoundaryError } from '../domain/calibratedProjection';
 import { Dialog } from '../components/Dialog';
+import { PlanTools } from '../components/PlanTools';
 import { UiIcon } from '../components/UiIcon';
 function errorText(error, fallback) {
     if (error instanceof ApiError && error.status === 409)
@@ -53,6 +54,7 @@ export function EditorPage({ gardenId }) {
     const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
     const [dimensionsOpen, setDimensionsOpen] = useState(false);
     const [leaveOpen, setLeaveOpen] = useState(false);
+    const [leaveDestination, setLeaveDestination] = useState('/');
     const allowNavigation = useRef(false);
     useEffect(() => {
         if (gardenQuery.data) {
@@ -103,7 +105,7 @@ export function EditorPage({ gardenId }) {
             useEditorStore.getState().setSaveError(errorText(error, 'サーバーへ接続できませんでした。編集内容は保持されています。確認後に再試行してください。'));
         },
     });
-    function save() {
+    async function save() {
         const state = useEditorStore.getState();
         if (!state.document || !state.isDirty || state.isSaving || state.isTransformDragging)
             return;
@@ -127,15 +129,21 @@ export function EditorPage({ gardenId }) {
         const snapshot = structuredClone(state.document);
         state.setSaving(true);
         state.setSaveError(null);
-        saveGarden.mutate(snapshot);
+        try { await saveGarden.mutateAsync(snapshot); return true; }
+        catch { return false; }
     }
     function goToList() {
+        requestNavigation('/');
+    }
+    function requestNavigation(url) {
         const state = useEditorStore.getState();
+        if (state.isSaving || state.isTransformDragging) return;
         if (state.isDirty || state.photoBoundaryDraft !== null || state.isCalibrating) {
+            setLeaveDestination(url);
             setLeaveOpen(true);
             return;
         }
-        window.location.assign('/');
+        window.location.assign(url);
     }
     function retryModel(objectId) {
         const object = document?.objects.find((placed) => placed.id === objectId);
@@ -146,15 +154,16 @@ export function EditorPage({ gardenId }) {
         setRetryRequest((previous) => ({ objectId, sequence: previous?.objectId === objectId ? previous.sequence + 1 : 1 }));
     }
     if (gardenQuery.isLoading || !document || document.id !== gardenId) {
-        return (<div className="page-shell loading-shell">
+        return (<div className="canvas-shell">
         <GardenHeader title="庭を開いています"/>
+        <div className="page-shell loading-shell">
         {gardenQuery.isLoading && <p className="notice" role="status">保存した庭をAPIから読み込んでいます…</p>}
         {gardenQuery.isError && (<div className="panel load-error">
             <p className="notice notice-error" role="alert">庭を取得できませんでした。庭ID、API、MySQLの状態を確認してください。</p>
             <button className="button button-secondary" onClick={() => gardenQuery.refetch()}>再試行</button>
             <button className="button button-secondary" onClick={() => window.location.assign('/')}>庭一覧へ戻る</button>
           </div>)}
-      </div>);
+      </div></div>);
     }
     const assets = assetQuery.data ?? [];
     const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
@@ -170,10 +179,10 @@ export function EditorPage({ gardenId }) {
     const statusText = isSaving ? '保存中…' : isCalibrating ? 'カメラを設定中' : hasBoundaryDraft ? '輪郭を描画中' : isDirty ? '未保存の変更' : '保存済み';
     const isEditingDisabled = isSaving || isTransformDragging || isCalibrating;
     const photoReady = !hasBoundaryDraft && !isCalibrating && (!document.photo || (validSurface(document.photo) && !calibratedBoundaryError(document.photo, document.width, document.depth)));
-    return (<div className="editor-shell">
+    return (<div className="editor-shell canvas-shell">
+      <SiteHeader onNavigate={requestNavigation} disabled={isSaving || isTransformDragging}/>
       <header className="document-bar">
-        <button className="brand-mark editor-brand" aria-label="Greenly 庭一覧へ" onClick={goToList} disabled={isEditingDisabled}><GreenlyIcon/><span>Greenly</span></button>
-        <button className="icon-button list-button" aria-label="← 庭一覧" title="庭一覧に戻る" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="back"/></button>
+        <button className="icon-button list-button" aria-label="← 庭一覧" title="庭一覧に戻る" onClick={goToList} disabled={isEditingDisabled}><UiIcon name="back"/><span className="editor-list-label">庭一覧</span></button>
         <div className="document-title"><h1>{document.name}</h1><span>{document.photo && document.photo.boundary.length >= 3
             ? `${document.photo.boundary.length}辺の庭` : `${document.width} × ${document.depth} m`}</span></div>
         <div className="toolbar-status" aria-live="polite">
@@ -199,6 +208,7 @@ export function EditorPage({ gardenId }) {
           {failedModelIds.map((id) => (<button key={id} type="button" onClick={() => retryModel(id)}>モデルを再試行</button>))}
         </div>)}
 
+      <PlanTools document={document} assets={assets} disabled={isEditingDisabled} photoMode={viewMode === 'photo'} canSave={photoReady} onSave={save} onNavigate={(url) => { allowNavigation.current = true; window.location.assign(url); }} />
       <main className={`editor-layout${propertiesCollapsed ? ' inspector-hidden' : ''}`}>
         <section className="canvas-column" aria-label="庭の3D編集エリア">
           <div className="canvas-tools">
@@ -228,7 +238,7 @@ export function EditorPage({ gardenId }) {
       </main>
       {leaveOpen && <Dialog title="変更を保存せずに戻りますか？" description="保存していない編集内容は破棄されます。" onClose={() => setLeaveOpen(false)} footer={<>
         <button type="button" className="button button-secondary" data-dialog-autofocus onClick={() => setLeaveOpen(false)}>編集を続ける</button>
-        <button type="button" className="button button-danger" onClick={() => { allowNavigation.current = true; window.location.assign('/'); }}>変更を破棄して戻る</button>
+        <button type="button" className="button button-danger" onClick={() => { allowNavigation.current = true; window.location.assign(leaveDestination); }}>変更を破棄して戻る</button>
       </>}><p>「{document.name}」の最後に保存した状態は残ります。</p></Dialog>}
     </div>);
 }

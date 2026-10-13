@@ -1,5 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600&family=Noto+Serif+JP:wght@400;500;600&display=swap');
+
 :root {
-  font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+  font-family: 'DM Sans', 'Noto Sans JP', sans-serif;
+  --serif: 'Noto Serif JP', Georgia, serif;
   font-synthesis: none; text-rendering: optimizeLegibility;
   color: #283630; background: #f5f6f4;
   --ink: #283630; --muted: #737d77; --paper: #fff; --line: #e0e5df;
@@ -7,6 +10,7 @@
   --danger: #a04436; --ochre: #c09a54;
 }
 * { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }
 
 body {
   min-width: 1120px;
@@ -17,7 +21,8 @@ body {
     #f4f4ed;
 }
 
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
+h1, h2, h3 { font-family: var(--serif); }
 button { color: inherit; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid rgba(65, 111, 73, 0.35); outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: 0.58; }
@@ -46,16 +51,11 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .brand-icon {
-  display: grid;
-  width: 33px;
-  height: 33px;
-  place-items: center;
-  border-radius: 11px 11px 11px 4px;
-  color: white;
-  background:transparent;
-  font-family: Georgia, serif;
-  font-size: 20px;
-  font-style: italic;
+  display: block;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  object-fit: contain;
 }
 
 .brand-heading h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.35px; }

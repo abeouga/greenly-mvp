@@ -16,7 +16,7 @@ public partial class MainWindow : Window
     private static readonly System.Windows.Media.Brush ErrorBrush = new SolidColorBrush(MediaColor.FromRgb(244, 91, 105));
 
     private readonly OverlaySettings _settings;
-    private readonly GreenlyController _controller;
+    private readonly KusakariCanvasController _controller;
     private readonly DispatcherTimer _statusTimer;
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
     private bool _operationRunning;
@@ -27,12 +27,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _settings = OverlaySettings.Load();
-        _controller = new GreenlyController(_settings);
+        _controller = new KusakariCanvasController(_settings);
         _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _statusTimer.Tick += async (_, _) => await RefreshStatusAsync();
         _trayIcon = CreateTrayIcon();
         RestoreWindowPosition();
-        AppLog.Write("Greenly overlay started.");
+        AppLog.Write("Kusakari Canvas overlay started.");
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -46,12 +46,12 @@ public partial class MainWindow : Window
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("表示", null, (_, _) => Dispatcher.Invoke(ShowOverlay));
-        menu.Items.Add("Greenlyを再起動", null, (_, _) => Dispatcher.Invoke(async () => await RunOperationAsync(Operation.Restart)));
+        menu.Items.Add("Kusakari Canvasを再起動", null, (_, _) => Dispatcher.Invoke(async () => await RunOperationAsync(Operation.Restart)));
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("終了", null, (_, _) => Dispatcher.Invoke(ExitApplication));
         var icon = new System.Windows.Forms.NotifyIcon
         {
-            Text = "Greenly Control",
+            Text = "Kusakari Canvas Control",
             Icon = System.Drawing.SystemIcons.Application,
             ContextMenuStrip = menu
         };
@@ -83,7 +83,7 @@ public partial class MainWindow : Window
 
         if (status.BothHealthy)
         {
-            SummaryText.Text = "Greenly 稼働中";
+            SummaryText.Text = "Kusakari Canvas 稼働中";
             CompactStatusText.Text = "稼働中";
         }
         else if (!status.BackendHealthy && !status.FrontendHealthy)
@@ -164,7 +164,8 @@ public partial class MainWindow : Window
         {
             AppLog.Write($"{operation} failed: {ex}");
             ApplyErrorState(ex.Message);
-            _trayIcon.ShowBalloonTip(5000, "Greenly Control", ex.Message, System.Windows.Forms.ToolTipIcon.Error);
+            try { _trayIcon.ShowBalloonTip(5000, "Kusakari Canvas Control", ex.Message, System.Windows.Forms.ToolTipIcon.Error); }
+            catch (InvalidOperationException) { }
             await Task.Delay(1000);
         }
         finally
@@ -183,7 +184,7 @@ public partial class MainWindow : Window
     {
         if (_controller.FrontendUrl is null)
         {
-            System.Windows.MessageBox.Show(this, "Greenly Webが起動していません。", "Greenly", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(this, "Kusakari Canvas Webが起動していません。", "Kusakari Canvas", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         Process.Start(new ProcessStartInfo(_controller.FrontendUrl) { UseShellExecute = true });

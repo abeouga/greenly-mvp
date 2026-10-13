@@ -6,7 +6,7 @@ public readonly record struct WindowPosition(double Left, double Top, bool Compa
 
 public static class WindowPositionStore
 {
-    private static readonly string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GreenlyOverlay");
+    private static readonly string DirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KusakariCanvasOverlay");
     private static readonly string FilePath = Path.Combine(DirectoryPath, "window-position.json");
 
     public static WindowPosition? Load()

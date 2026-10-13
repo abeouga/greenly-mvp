@@ -1,3 +1,4 @@
+import { CaptureReady } from './CaptureReady';
 import { useMemo } from 'react';
 import { Canvas, events } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
@@ -34,6 +35,7 @@ export function PhotoCanvas({ document, assets, selectedAssetId, disabled, objec
         return <div role="alert">写真上の木の表示にはWebGLが必要です。</div>;
     return <div className="photo-models" data-testid="photo-model-canvas" data-object-count={objectsVisible ? document.objects.length : 0}>
     <Canvas camera={camera} dpr={[1, 1.5]} events={photoEvents} gl={{ antialias: true, alpha: true }} onCreated={({ gl }) => gl.setClearColor(0, 0)}>
+      <CaptureReady />
       <ambientLight intensity={1.7}/>
       <directionalLight position={[7, 12, 5]} intensity={2.1}/>
       <GardenGround document={document} selectedAsset={assets.find((asset) => asset.id === selectedAssetId) ?? null} disabled={disabled} invisible/>

@@ -4,7 +4,8 @@ import { useEditorStore } from '../stores/editorStore';
 import { PhotoCanvas } from '../three/PhotoCanvas';
 import { PhotoCalibrationEditor } from './PhotoCalibrationEditor';
 import { calibratedBoundaryError, projectionCorners } from '../domain/calibratedProjection';
-import { PhotoEdges, EdgeMeasurementPopover } from './PhotoEdges';
+import { PhotoEdges } from './PhotoEdges';
+import { EdgeMeasurementPopover } from './EdgeMeasurementPopover';
 import { UiIcon } from './UiIcon';
 export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retryRequest, onModelLoaded, onModelFailed }) {
     const svg = useRef(null);
@@ -187,7 +188,7 @@ export function PhotoOverlay({ document, assets, selectedAssetId, disabled, retr
     </button> : <>
       <div className={`photo-guidance photo-hint${drawingBoundary ? ' is-drawing' : ''}`} aria-live="polite">
         {drawingBoundary ? <><span className="drawing-count">{draft.length}/64点</span><span>頂点を順にクリック。3点以上で始点につなぐと確定します。</span></>
-                : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを確認 · 頂点をドラッグして輪郭を調整'}</span></>}
+                : <><span className={`camera-state${photo.calibration ? ' is-calibrated' : ''}`}>{photo.calibration ? 'カメラ設定済み' : 'カメラ未設定・概算'}</span><span>{!boundaryValid ? '「庭の領域を描く」で輪郭を指定してください。' : '辺をクリックして長さを入力 · 頂点をドラッグして輪郭を調整'}</span></>}
       </div>
       <div className="photo-stage-shell">
       <svg ref={svg} className="photo-stage" viewBox={`0 0 ${photo.imageWidth} ${photo.imageHeight}`} onClick={onImageClick} onPointerMove={(event) => { if (disabled)

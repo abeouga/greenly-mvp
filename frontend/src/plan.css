@@ -1,0 +1,104 @@
+.plan-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f5f7ef;
+  border-bottom: 1px solid #dce4d4;
+}
+.plan-actions button {
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid #b9cbb0;
+  border-radius: 7px;
+  padding: 9px 12px;
+  background: white;
+  color: #344b31;
+  cursor: pointer;
+}
+.plan-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.plan-actions .button-primary {
+  background: #365d3d;
+  color: white;
+}
+.plan-quantity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid #e2e7db;
+  padding: 14px 0;
+}
+.plan-quantity-row input {
+  width: 80px;
+  display: block;
+  padding: 8px;
+  border: 1px solid #c2cfb9;
+  border-radius: 5px;
+}
+.plan-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 20px 0;
+}
+.plan-form select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+}
+.plan-mock-note,
+.plan-suggestion {
+  padding: 16px;
+  background: #edf2e6;
+  border-left: 3px solid #8da578;
+}
+.plan-result-image {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+  margin: 18px 0;
+}
+.plan-duplicate {
+  align-self: flex-end;
+  font: inherit;
+  background: #f5f8ef;
+  border: 1px solid #bacaad;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 10px 16px;
+  color: #365439;
+  cursor: pointer;
+}
+.ec-return-link {
+  margin-left: 12px;
+  color: #3a603b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .plan-form {
+    grid-template-columns: 1fr;
+  }
+  .plan-actions {
+    padding: 10px;
+  }
+  .plan-actions button {
+    flex: 1;
+  }
+  .ec-return-link {
+    font-size: 11px;
+  }
+}
+
+.plan-footprint {
+  display: block;
+  margin-top: 5px;
+  color: #71816a;
+  font-size: 11px;
+}

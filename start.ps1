@@ -14,6 +14,5 @@ if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
 }
 
 & $setup
-if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw '初回セットアップに失敗しました。' }
 
 & $launcher @PSBoundParameters

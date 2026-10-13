@@ -1,6 +1,8 @@
-# Greenly 手動3D庭エディタ MVP
+# Kusakari Canvas 3D庭づくり機能 MVP
 
-Greenlyは、PCブラウザーで庭を手動設計するローカル開発用MVPです。名前だけで庭を作成し、編集画面で形・寸法を設定して4種類の開発用GLBを配置します。FastAPI経由でMySQLへ保存して復元します。AI提案、認証、資材計算、写実的なモデルは含みません。
+KusakariのガーデニングEC内で使う3D庭づくり機能（Kusakari Canvas）のローカル開発用MVPです。独立した購入サービスではありません。名前だけで庭を作成し、編集画面で形・寸法を設定して4種類の開発用GLBを配置します。FastAPI経由でMySQLへ保存して復元します。配置数量からECの商品候補を開き、選択した商品をECのカートへ追加できます。植物候補は条件別モックです。認証、AI通信、BOM計算、写実的なモデルは含みません。
+
+起動・セットアップで使う環境変数は `KUSAKARI_CANVAS_*` です。Python配布パッケージは `kusakari-canvas-api`、import名は `kusakari_canvas_api` です。MySQLデータベースは `kusakari_canvas` / `kusakari_canvas_e2e`、ツールと専用MySQLの保存先は現在のWindowsユーザーの `%LOCALAPPDATA%\KusakariCanvas` です。`KUSAKARI_CANVAS_HOME` で保存先を変更できます。旧名称の環境変数・DB名・ユーザー領域は現行設定では参照しません。
 
 庭写真を読み込み、任意形状の地面輪郭（3〜64点）を直接描けます。頂点数による自動終了はなく、始点1をクリックして閉じた時に領域を確定します。写真＋設計モードでは固定したThree.jsカメラで木などのGLBを写真に重ねて表示し、写真・3D庭のどちらからも配置できます。3D庭モードでは写真を外して庭を自由に回転できます。
 
@@ -8,7 +10,7 @@ Greenlyは、PCブラウザーで庭を手動設計するローカル開発用MV
 
 - Windows 10/11 x64。Windows以外からは`start.bat`とWPFオーバーレイを利用できません。
 - Node.js 22.12以降、Python 3.12、uv（`setup.bat`が不足分をユーザー領域へ用意します。Java/Mavenは不要）
-- MySQL Server 8.0/8.4（未導入の場合は`setup.bat`がGreenly専用MySQLを用意します）
+- MySQL Server 8.0/8.4（未導入の場合は`setup.bat`がKusakari Canvas用MySQLをユーザー領域へ用意します）
 - Chromium（E2Eを実行するとき）
 - 初回セットアップ時のインターネット接続とディスク空き容量。既存MySQLを使う場合はその管理者認証情報
 
@@ -20,9 +22,9 @@ Windows 10/11 x64で、リポジトリのルートにある`setup.bat`を実行�
 
 セットアップ後、`start.bat`またはPowerShellの`./start.ps1`で起動します。起動時も環境を再確認し、ロックファイルが変わった場合だけ依存関係を復元します。`start.bat -NoBrowser`、`start.ps1 -NoBrowser`も使えます。
 
-既存のMySQLが`127.0.0.1:3306`で応答する場合は、そのサーバーを利用します。初回に「MySQL管理者名」でEnterを押すとrootが選択されます。続けて、その管理者のパスワードを非表示入力します。管理者パスワードは保存しません。GreenlyのDB・専用ユーザー・権限・テーブルを自動準備し、専用ユーザーの自動生成パスワードを`.env`と`.env.e2e`へ保存します。通常はSQLの手動実行や設定ファイルの手動編集は不要です。
+既存のMySQLが`127.0.0.1:3306`で応答する場合は、そのサーバーを利用します。初回に「MySQL管理者名」でEnterを押すとrootが選択されます。続けて、その管理者のパスワードを非表示入力します。管理者パスワードは保存しません。Kusakari Canvas用のDB・専用ユーザー・権限・テーブルを自動準備し、専用ユーザーの自動生成パスワードを`.env`と`.env.e2e`へ保存します。通常はSQLの手動実行や設定ファイルの手動編集は不要です。
 
-MySQLが未稼働で接続先も未指定の場合は、Greenly専用MySQLをユーザー領域へ用意します。管理者名・パスワードの入力は不要です。既存MySQLから独立した保存先と空きポートを使い、既存サービスを変更しません。専用MySQLを明示的に選ぶ場合は次を実行します。既存の明示接続設定を別DBへ自動変更する処理はありません。
+MySQLが未稼働で接続先も未指定の場合は、Kusakari Canvas用MySQLをユーザー領域へ用意します。管理者名・パスワードの入力は不要です。既存MySQLから独立した保存先と空きポートを使い、既存サービスを変更しません。専用MySQLを明示的に選ぶ場合は次を実行します。既存の明示接続設定を別DBへ自動変更する処理はありません。
 
 ```powershell
 .\setup.bat -DatabaseMode managed
@@ -44,13 +46,13 @@ MySQLが未稼働で接続先も未指定の場合は、Greenly専用MySQLをユ
 PowerShellから直接起動する場合は、次のコマンドを使えます。カレントディレクトリがリポジトリ外でも動作し、パスに空白が含まれていても引用符で指定できます。
 
 ```powershell
-$repo = 'C:\path\to\gleenly-mvp' # クローン先に置き換え
+$repo = 'C:\path\to\kusakari-canvas' # クローン先に置き換え
 & (Join-Path $repo 'start.ps1')
 ```
 
-スクリプトは`127.0.0.1`だけにbindし、APIは`8080`、Webは`5173`を優先します。使用中のポートは、APIが`18081`・`18082`、Webが`5174`・`5175`へ順に切り替わります。APIが既に応答中なら、同梱アセットIDと`X-Greenly-Backend: fastapi`を確認したうえで既存のFastAPIを再利用します。旧Java APIは再利用しません。起動完了後にブラウザーを開きます。`start.bat -NoBrowser`または`start.ps1 -NoBrowser`は自動起動を抑える検証用オプションです。APIとWebのログは一つのコンソールに表示されます。
+スクリプトは`127.0.0.1`だけにbindし、APIは`8080`、Webは`5173`を優先します。使用中の場合、APIは`18081〜18100`、Webは`5173〜5199`から空きポートを選びます。必要な場合は`KUSAKARI_CANVAS_PORT`と`KUSAKARI_CANVAS_WEB_PORT`でポートを指定できます。APIが既に応答中なら、同梱アセットIDと`X-Kusakari-Canvas-Backend: fastapi`を確認したうえで既存のFastAPIを再利用します。旧Java APIは再利用しません。起動完了後にブラウザーを開きます。`start.bat -NoBrowser`または`start.ps1 -NoBrowser`は自動起動を抑える検証用オプションです。APIとWebのログは一つのコンソールに表示されます。
 
-API起動前にAlembic移行を実行します。新規DBは0001/0002でテーブルと4つのアセットを作成します。旧Flyway V1/V2の既存DBは構造と履歴を照合し、mysqldumpバックアップ後に対応するAlembic版として記録します。バックアップはGit外の`%LOCALAPPDATA%\Greenly\backups`へ保存し、構造不一致・履歴不明・バックアップ失敗ではDBを変更せず停止します。既存庭を消す設定はありません。移行だけを行うには`npm run migrate:api`を使います。詳細は[`docs/fastapi-migration.md`](docs/fastapi-migration.md)に記録しています。
+API起動前にAlembic移行を実行します。新規DBは0001/0002でテーブルと4つのアセットを作成します。旧Flyway V1/V2の既存DBは構造と履歴を照合し、mysqldumpバックアップ後に対応するAlembic版として記録します。バックアップはGit外の`%LOCALAPPDATA%\KusakariCanvas\backups`へ保存し、構造不一致・履歴不明・バックアップ失敗ではDBを変更せず停止します。既存庭を消す設定はありません。移行だけを行うには`npm run migrate:api`を使います。詳細は[`docs/fastapi-migration.md`](docs/fastapi-migration.md)に記録しています。
 
 停止時にCtrl+Cを押すと、この起動スクリプトが起動したAPI・Webプロセスを停止します。既に起動していたAPIは停止しません。APIが起動に失敗した場合は、子プロセス終了を検出して長時間待たずにエラーを表示します。Viteは`/api`を選択されたAPIポートへproxyします。CORSの全許可設定は追加していません。
 
@@ -58,14 +60,14 @@ E2Eはsetupが作成した`.env.e2e`を使用します。API起動時のe2e prof
 
 ## 操作
 
-1. 庭名だけを入力して作成します。土台は10m × 8mで開始します。写真の多角形は輪郭の辺をクリックして、現在の長さを確認します。実測値は「写真のカメラを設定」で基準長方形の幅・奥行きに入力して計算・適用します。校正寸法を変えても写真上の輪郭の位置は保たれます。写真のない矩形の土台は3D画面上部の「土台設定」から変更できます。編集後は上部の「保存」で確定します。
+1. 庭名だけを入力して作成します。土台は10m × 8mで開始します。写真の多角形は輪郭の辺をクリックして長さ（m）を入力し、「長さを適用」またはEnterで庭全体の縮尺を変更します。写真上の輪郭と配置物の接地位置を保ち、ほかの辺も同じ割合で変わります。カメラの角度・画角は「写真のカメラを設定」で調整します。写真のない矩形の土台は3D画面上部の「土台設定」から変更できます。編集後は上部の「保存」で確定します。
 2. 画面下の素材カタログで種類を選び、地面をクリックします。同じ素材を続けて配置でき、Escで配置モードを終了します。1目盛りは1mです。
 3. 配置済み一覧またはモデルをクリックして選択します。移動ツールではモデル本体をドラッグできます。回転ツールでは対象の周囲に出る円形ハンドルをドラッグします。ハンドルはホバー時に色が変わり、操作中にEscを押すと開始前の角度へ戻ります。拡縮は選択枠のギズモか右の入力欄を使います。
 4. 回転入力は度、保存値はラジアンです。倍率は縦横比を維持し、0.25〜3.0に制限します。オブジェクトのY座標とX/Z回転は固定です。
 5. 上部の「保存」で庭全体を送信します。移動操作ごとには送信しません。失敗時は編集状態を保持し、表示された再試行操作を使います。
 6. カメラは左ドラッグで回転、右ドラッグでパン、ホイールでズームできます。「上から見る」は再現可能な視点、「初期視点」は斜め上の視点へ戻します。
 7. 削除キーまたは右側の「削除」で選択オブジェクトを削除します。入力欄・ダイアログでのキー操作は背面の配置物へ伝えません。未保存で一覧へ戻る場合は、編集を続けるか破棄するかを画面内で確認します。ブラウザー自体を閉じる場合はブラウザーの確認になります。
-8. 下部カタログの「しまう／開く」と、上部の「配置・編集」は独立して開閉できます。辺の長さは写真上の辺をクリックして確認し、土台設定・写真カメラ設定は専用ダイアログで編集します。ダイアログはEscで閉じ、呼び出した操作へフォーカスを戻します。詳しい画面構成は[ワークスペースUI](docs/workspace-ui.md)を参照してください。
+8. 下部カタログの「しまう／開く」と、上部の「配置・編集」は独立して開閉できます。辺の長さは写真上の辺をクリックして入力し、取消・Escで未適用の入力を破棄します。土台設定・写真カメラ設定は専用ダイアログで編集します。ダイアログはEscで閉じ、呼び出した操作へフォーカスを戻します。詳しい画面構成は[ワークスペースUI](docs/workspace-ui.md)を参照してください。
 
 ### 写真と多角形地面
 
@@ -77,7 +79,7 @@ E2Eはsetupが作成した`.env.e2e`を使用します。API起動時のe2e prof
 4. カタログのアセットを選んで輪郭内をクリックすると、写真上にも木などの3Dモデルを配置できます。3D庭で置いた木も同じ位置に写真へ表示されます。木をクリックして選択し、右側のプロパティで位置・回転・倍率を調整できます。写真画面のカメラは固定され、ドラッグによる視点回転はありません。地面・グリッド・配置の表示は個別に切り替えられます。
 5. 「3D庭」に切り替えると写真は消え、同じ多角形地面と配置物を回転・パン・ズームできます。「写真＋設計」へ戻しても写真上の指定位置は維持されます。上部の「保存」で写真・輪郭・内部の変換基準・配置物をMySQLに保存します。
 
-「写真のカメラを設定」では、水平な地面の基準長方形を手前左→手前右→奥右→奥左の順に指定し、その実測幅・奥行きを入力して撮影カメラを計算します。計算結果を確認して適用すると、同じ透視カメラで木の高さ・奥行きとクリック位置を扱います。基準長方形は庭の多角形とは別の情報です。辺の計測表示は読み取り専用で、長さの確認によって頂点は動きません。校正後の表示はカメラから算出した実寸、未設定時は土台に基づく概算です。カメラ設定は[写真カメラ校正](docs/photo-camera-calibration.md)、辺の計測は[多角形の辺計測](docs/polygon-edge-editing.md)を参照してください。写真内の既存物による遮蔽、広角歪みの補正、傾斜地、写真だけからの自動測量はありません。
+「写真のカメラを設定」では、水平な地面の基準長方形を手前左→手前右→奥右→奥左の順に指定し、その実測幅・奥行きを入力して撮影カメラを計算します。計算結果を確認して適用すると、同じ透視カメラで木の高さ・奥行きとクリック位置を扱います。基準長方形は庭の多角形とは別の情報です。辺の長さを入力して全体の縮尺を変更しても写真上の頂点は動きません。校正後の表示はカメラから算出した実寸、未設定時は土台に基づく概算です。カメラ設定は[写真カメラ校正](docs/photo-camera-calibration.md)、辺の計測は[多角形の実寸編集](docs/polygon-edge-editing.md)を参照してください。写真内の既存物による遮蔽、広角歪みの補正、傾斜地、写真だけからの自動測量はありません。
 
 座標は庭の中心をX=0,Z=0、地面をY=0とします。Xは幅、Zは奥行きです。庭内制限はオブジェクトの配置基準点に適用します。オブジェクト同士の重なりとモデル端部の庭外へのはみ出しは許可します。
 
@@ -105,7 +107,7 @@ npx playwright install chromium
 # 実MySQLの独立検証（専用E2E資格情報と一時テストDBの作成権限が必要）
 npm run verify:api
 
-# 全E2E。専用ポート18080/15174でAPI(e2e profile)とViteを起動し、greenly_e2e DBを使用
+# 全E2E。利用可能なローカルポートでAPI(e2e profile)とViteを起動し、kusakari_canvas_e2e DBを使用
 npm run test:e2e
 
 # 対象シナリオだけ実行
@@ -114,13 +116,13 @@ npm run test:e2e -- --grep 'D\. 保存失敗'
 npm run test:e2e -- --grep 'H\. 回転リング'
 ```
 
-E2Eの前に同じPowerShellで`GREENLY_E2E_DB_USER`と`GREENLY_E2E_DB_PASSWORD`を設定してください。Git無視対象の`.env.e2e`にこれらのキーを設定することもできます。`GREENLY_E2E_DB_URL`で接続先を変更できますが、DB名は`greenly_e2e`から始まる専用DBに限定します。dev用`.env`からE2E資格情報を流用しません。E2E成功系は実フロント、実FastAPI、専用MySQL DBを使います。正常系APIはモックしていません。障害系だけ、Playwright routeで保存通信を遮断します。
+E2Eの前に同じPowerShellで`KUSAKARI_CANVAS_E2E_DB_USER`と`KUSAKARI_CANVAS_E2E_DB_PASSWORD`を設定してください。Git無視対象の`.env.e2e`にこれらのキーを設定することもできます。`KUSAKARI_CANVAS_E2E_DB_URL`で接続先を変更できますが、DB名は`kusakari_canvas_e2e`から始まる専用DBに限定します。dev用`.env`からE2E資格情報を流用しません。E2E成功系は実フロント、実FastAPI、専用MySQL DBを使います。正常系APIはモックしていません。障害系だけ、Playwright routeで保存通信を遮断します。
 
-`verify:api`はブラウザーE2Eで再現しにくい同時PUT、途中の整合性違反によるrollback、owner分離、旧DB引き継ぎを検証します。移行検証では固有名の`greenly_e2e_migration_*` DBを作成し、自身が作成したDBだけを削除します。テスト用接続ユーザーにそのDBの作成・操作・削除権限を設定してください。実行記録は`artifacts/fastapi/backend-verification.json`へ保存します。
+`verify:api`はブラウザーE2Eで再現しにくい同時PUT、途中の整合性違反によるrollback、owner分離、旧DB引き継ぎを検証します。移行検証では固有名の`kusakari_canvas_e2e_migration_*` DBを作成し、自身が作成したDBだけを削除します。テスト用接続ユーザーにそのDBの作成・操作・削除権限を設定してください。実行記録は`artifacts/fastapi/backend-verification.json`へ保存します。
 
 既存MySQLに一時DB作成権限を与えず検証する場合は、`backend`で`uv run --locked python -m verification.run_isolated_mysql`を実行できます。インストール済みの実MySQL Serverを固有のデータディレクトリと空きポートで起動し、API独立検証と全E2Eを実行後、そのMySQLだけを停止します。既存MySQLサービスは変更しません。データ・ログ・バックアップはGit外に残し、結果を`artifacts/fastapi/isolated-mysql-verification.json`へ保存します。
 
-Playwrightは専用ポート18080(API)・15174(Web)を使用し、各シナリオで作成した庭だけを削除します。開発用DBへは接続しません。実行記録、APIで取得したJSON、再読み込み後のスクリーンショットは`artifacts/e2e/`に置きます。HTMLレポート、trace、失敗時スクリーンショットは`artifacts/playwright-report/`と`artifacts/playwright-results/`です。
+Playwrightは起動時に空きローカルポートを取得し、APIとWebを分離して起動します。各シナリオで作成した庭だけを削除し、開発用DBへは接続しません。実行記録、APIで取得したJSON、再読み込み後のスクリーンショットは`artifacts/e2e/`に置きます。HTMLレポート、trace、失敗時スクリーンショットは`artifacts/playwright-report/`と`artifacts/playwright-results/`です。
 
 ## APIと責務
 
@@ -133,14 +135,18 @@ Playwrightは専用ポート18080(API)・15174(Web)を使用し、各シナリ�
 - `frontend/src/api/`: `/api`契約とHTTPエラー変換
 - `frontend/src/pages/`、`components/`: 庭一覧・エディタUI
 - `frontend/src/three/`: GLB、地面、カメラ、R3F操作
-- `backend/greenly_api/main.py`、`schemas.py`、`errors.py`: API、DTO、エラー応答
-- `backend/greenly_api/validation.py`: サーバー検証と写真・輪郭制約
-- `backend/greenly_api/service.py`、`models.py`、`database.py`: owner、revision、トランザクション、ORM
-- `backend/greenly_api/migrations.py`、`backend/alembic/`: 旧DB照合、バックアップ、Alembic履歴と初期カタログ
-- `e2e/greenly.spec.ts`: 実ユーザー操作とAPI/DB連携のChromiumシナリオ
+- `backend/kusakari_canvas_api/main.py`、`schemas.py`、`errors.py`: API、DTO、エラー応答
+- `backend/kusakari_canvas_api/validation.py`: サーバー検証と写真・輪郭制約
+- `backend/kusakari_canvas_api/service.py`、`models.py`、`database.py`: owner、revision、トランザクション、ORM
+- `backend/kusakari_canvas_api/migrations.py`、`backend/alembic/`: 旧DB照合、バックアップ、Alembic履歴と初期カタログ
+- `e2e/kusakari-canvas.spec.ts`: 実ユーザー操作とAPI/DB連携のChromiumシナリオ
 
 ## 利用境界と制限
 
 dev/e2e用デモ所有者はサーバーが固定し、HTTP bodyからownerIdを受け取りません。FastAPIは127.0.0.1へbindします。一般ユーザー向け認証・認可はありません。このためLANや公開サーバーへbindして運用してはいけません。公開運用にはログイン、認可、所有者分離の実装が必要です。
 
 配置上限は200個、庭各辺は1〜50mです。AI、写真からの自動測量、高低差のある地形、成長予測、BOM/価格、衝突物理、Undo/Redo、多人数編集、スマートフォン専用UIは未実装です。モデル読み込みはGLBファイルが存在することを前提とし、失敗時は対象表示を維持しながら再試行・削除できます。
+
+## EC連携・追加画面
+
+庭の複製、数量・施工面積の確認、条件別植物候補、現在の写真/3D配置のPNG出力を追加しています。[EC連携の仕様](docs/ec-integration.md) を参照してください。
